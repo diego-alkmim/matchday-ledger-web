@@ -59,6 +59,9 @@ export function ProtectedPage({ children }: { children: React.ReactNode }) {
           <NavItem href="/categorias" label="Categorias" onNavigate={() => setOpen(false)} />
           <NavItem href="/lancamentos" label="Lançamentos" onNavigate={() => setOpen(false)} />
           <NavItem href="/relatorios" label="Relatórios" onNavigate={() => setOpen(false)} />
+          {user?.role === "ADMIN" && (
+            <NavItem href="/usuarios" label="Usuários" onNavigate={() => setOpen(false)} />
+          )}
         </div>
         <div className="pt-2 border-t border-slate-800">
           <button

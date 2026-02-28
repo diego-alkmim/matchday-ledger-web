@@ -31,9 +31,23 @@ export default function Charts() {
   const loaded = useRef(false);
 
   const formatMonth = (value: string) => {
+    // value pode ser "YYYY-MM" ou Date string; forçamos UTC para evitar fuso
+    if (/^\d{4}-\d{2}$/.test(value)) {
+      const [y, m] = value.split("-").map(Number);
+      const d = new Date(Date.UTC(y, m - 1, 1));
+      return d.toLocaleDateString("pt-BR", {
+        month: "short",
+        year: "2-digit",
+        timeZone: "UTC",
+      });
+    }
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+    return d.toLocaleDateString("pt-BR", {
+      month: "short",
+      year: "2-digit",
+      timeZone: "UTC",
+    });
   };
 
   useEffect(() => {
@@ -46,7 +60,7 @@ export default function Charts() {
         entradas: Number(row.entradas || 0),
         saidas: Number(row.saidas || 0),
         monthLabel: formatMonth(
-          row.month || row.date || row.monthLabel || row.monthly,
+          row.month_label || row.month || row.date || row.monthLabel || row.monthly,
         ),
       }));
       setMonthly(mapped);

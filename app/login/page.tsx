@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
 
@@ -30,11 +31,14 @@ export default function LoginPage() {
       return;
     }
     try {
+      setLoading(true);
       await login(email.trim(), password);
       router.replace("/dashboard");
     } catch (err: any) {
       const msg = err?.response?.data?.message || "Credenciais inválidas";
       toast.error(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -69,9 +73,9 @@ export default function LoginPage() {
         </div>
         <button
           className="w-full rounded bg-emerald-500 py-2 font-semibold text-slate-900 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={!canSubmit}
+          disabled={!canSubmit || loading}
         >
-          Entrar
+          {loading ? "Entrando..." : "Entrar"}
         </button>
       </form>
     </main>

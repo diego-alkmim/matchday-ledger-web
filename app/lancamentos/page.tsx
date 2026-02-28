@@ -10,6 +10,7 @@ interface Transaction {
   type: "ENTRADA" | "SAIDA";
   amount: number;
   date: string;
+  createdAt?: string;
   paymentMethod: "PIX" | "DINHEIRO" | "CARTAO";
   notes?: string;
   game?: { id: string; opponent?: string | null; date: string };
@@ -66,7 +67,12 @@ export default function LancamentosPage() {
         api.get("/categories"),
         api.get("/games"),
       ]);
-      setItems(txRes.data.data || []);
+      const tx = (txRes.data.data || []).slice().sort((a: Transaction, b: Transaction) => {
+        const da = a.createdAt ? new Date(a.createdAt) : new Date(a.date);
+        const db = b.createdAt ? new Date(b.createdAt) : new Date(b.date);
+        return db.getTime() - da.getTime();
+      });
+      setItems(tx);
       setCategories(catRes.data.data || []);
       setGames(gameRes.data.data || []);
     } catch (e: any) {
@@ -265,14 +271,27 @@ export default function LancamentosPage() {
             {items.map((t) => (
               <div
                 key={t.id}
-                className="flex flex-col md:flex-row md:items-center md:justify-between rounded bg-slate-800 px-3 py-2"
+                className={`flex flex-col md:flex-row md:items-center md:justify-between rounded px-3 py-2 border ${
+                  t.type === "ENTRADA"
+                    ? "bg-emerald-950/40 border-emerald-600/60"
+                    : "bg-rose-950/30 border-rose-600/60"
+                }`}
               >
                 <div>
-                  <div className="font-semibold text-slate-100">
+                  <div className="font-semibold text-slate-100 flex items-center gap-2">
                     {t.category?.name.toUpperCase() || "SEM CATEGORIA"}
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        t.type === "ENTRADA"
+                          ? "bg-emerald-500/20 text-emerald-200 border border-emerald-500/40"
+                          : "bg-rose-500/20 text-rose-200 border border-rose-500/40"
+                      }`}
+                    >
+                      {t.type}
+                    </span>
                   </div>
                   <div className="text-sm text-slate-300">
-                    {t.type} • R${" "}
+                    R$
                     {Number(t.amount).toLocaleString("pt-BR", {
                       minimumFractionDigits: 2,
                     })}{" "}
