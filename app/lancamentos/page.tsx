@@ -15,6 +15,7 @@ interface Transaction {
   notes?: string;
   game?: { id: string; opponent?: string | null; date: string };
   category?: { id: string; name: string; type?: "ENTRADA" | "SAIDA" };
+  director?: { id: string; name: string };
 }
 interface Category {
   id: string;
@@ -26,6 +27,10 @@ interface Game {
   opponent?: string | null;
   date: string;
   location?: string | null;
+}
+interface Director {
+  id: string;
+  name: string;
 }
 
 const formatCurrency = (value: string) => {
@@ -47,8 +52,13 @@ export default function LancamentosPage() {
   const [items, setItems] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [games, setGames] = useState<Game[]>([]);
+  const [directors, setDirectors] = useState<Director[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [filters, setFilters] = useState({
+    gameId: "",
+    categoryId: "",
+  });
 
   const [form, setForm] = useState({
     amountDisplay: "",
@@ -58,14 +68,16 @@ export default function LancamentosPage() {
     paymentMethod: "PIX",
     date: "",
     notes: "",
+    directorId: "",
   });
 
   const load = async () => {
     try {
-      const [txRes, catRes, gameRes] = await Promise.all([
+      const [txRes, catRes, gameRes, directorRes] = await Promise.all([
         api.get("/transactions"),
         api.get("/categories"),
         api.get("/games"),
+        api.get("/directors"),
       ]);
       const tx = (txRes.data.data || []).slice().sort((a: Transaction, b: Transaction) => {
         const da = a.createdAt ? new Date(a.createdAt) : new Date(a.date);
@@ -75,6 +87,7 @@ export default function LancamentosPage() {
       setItems(tx);
       setCategories(catRes.data.data || []);
       setGames(gameRes.data.data || []);
+      setDirectors(directorRes.data.data || []);
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erro ao carregar lançamentos");
     }
@@ -89,6 +102,15 @@ export default function LancamentosPage() {
     [categories, form.categoryId],
   );
 
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const matchesGame = !filters.gameId || item.game?.id === filters.gameId;
+      const matchesCategory =
+        !filters.categoryId || item.category?.id === filters.categoryId;
+      return matchesGame && matchesCategory;
+    });
+  }, [items, filters]);
+
   const resetForm = () => {
     setForm({
       amountDisplay: "",
@@ -98,6 +120,7 @@ export default function LancamentosPage() {
       paymentMethod: "PIX",
       date: "",
       notes: "",
+      directorId: "",
     });
     setEditingId(null);
   };
@@ -111,6 +134,9 @@ export default function LancamentosPage() {
       if (!form.amount) return toast.error("Informe o valor");
 
       const catType = selectedCategory?.type || "ENTRADA";
+      if (catType === "ENTRADA" && !form.directorId) {
+        return toast.error("Selecione o diretor responsável pela entrada");
+      }
       const payload = {
         type: catType,
         amount: form.amount,
@@ -119,6 +145,7 @@ export default function LancamentosPage() {
         notes: form.notes,
         gameId: form.gameId,
         categoryId: form.categoryId,
+        directorId: catType === "ENTRADA" ? form.directorId : null,
       };
 
       if (editingId) {
@@ -155,6 +182,7 @@ export default function LancamentosPage() {
       paymentMethod: t.paymentMethod,
       date: t.date.slice(0, 10),
       notes: t.notes || "",
+      directorId: (t as any).director?.id || "",
     });
   };
 
@@ -237,6 +265,22 @@ export default function LancamentosPage() {
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
               />
+              {selectedCategory?.type === "ENTRADA" && (
+                <select
+                  className="rounded bg-slate-800 px-3 py-2"
+                  value={form.directorId}
+                  onChange={(e) =>
+                    setForm({ ...form, directorId: e.target.value })
+                  }
+                >
+                  <option value="">Diretor pagante</option>
+                  {directors.map((director) => (
+                    <option key={director.id} value={director.id}>
+                      {director.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="mt-3 flex gap-2">
               <button
@@ -266,9 +310,49 @@ export default function LancamentosPage() {
         )}
 
         <div className="rounded bg-slate-900 p-4 border border-slate-800">
-          <h2 className="font-semibold mb-3">Lançamentos</h2>
+          <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <h2 className="font-semibold">Lançamentos</h2>
+            <div className="grid gap-3 md:grid-cols-2">
+              <select
+                className="rounded bg-slate-800 px-3 py-2 text-sm"
+                value={filters.gameId}
+                onChange={(e) =>
+                  setFilters((current) => ({
+                    ...current,
+                    gameId: e.target.value,
+                  }))
+                }
+              >
+                <option value="">Todos os jogos</option>
+                {games.map((game) => (
+                  <option key={game.id} value={game.id}>
+                    {(game.opponent || "Sem adversário") +
+                      " - " +
+                      new Date(game.date).toLocaleDateString("pt-BR")}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="rounded bg-slate-800 px-3 py-2 text-sm"
+                value={filters.categoryId}
+                onChange={(e) =>
+                  setFilters((current) => ({
+                    ...current,
+                    categoryId: e.target.value,
+                  }))
+                }
+              >
+                <option value="">Todas as categorias</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           <div className="space-y-2">
-            {items.map((t) => (
+            {filteredItems.map((t) => (
               <div
                 key={t.id}
                 className={`flex flex-col md:flex-row md:items-center md:justify-between rounded px-3 py-2 border ${
@@ -325,9 +409,9 @@ export default function LancamentosPage() {
                 )}
               </div>
             ))}
-            {!items.length && (
+            {!filteredItems.length && (
               <div className="text-sm text-slate-400">
-                Nenhum lançamento cadastrado.
+                Nenhum lançamento encontrado para os filtros informados.
               </div>
             )}
           </div>
