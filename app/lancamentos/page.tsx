@@ -27,6 +27,7 @@ interface Game {
   opponent?: string | null;
   date: string;
   location?: string | null;
+  status?: "ABERTO" | "FECHADO";
 }
 interface Director {
   id: string;
@@ -79,11 +80,13 @@ export default function LancamentosPage() {
         api.get("/games"),
         api.get("/directors"),
       ]);
-      const tx = (txRes.data.data || []).slice().sort((a: Transaction, b: Transaction) => {
-        const da = a.createdAt ? new Date(a.createdAt) : new Date(a.date);
-        const db = b.createdAt ? new Date(b.createdAt) : new Date(b.date);
-        return db.getTime() - da.getTime();
-      });
+      const tx = (txRes.data.data || [])
+        .slice()
+        .sort((a: Transaction, b: Transaction) => {
+          const da = a.createdAt ? new Date(a.createdAt) : new Date(a.date);
+          const db = b.createdAt ? new Date(b.createdAt) : new Date(b.date);
+          return db.getTime() - da.getTime();
+        });
       setItems(tx);
       setCategories(catRes.data.data || []);
       setGames(gameRes.data.data || []);
@@ -110,6 +113,11 @@ export default function LancamentosPage() {
       return matchesGame && matchesCategory;
     });
   }, [items, filters]);
+
+  const openGames = useMemo(
+    () => games.filter((game) => game.status === "ABERTO"),
+    [games],
+  );
 
   const resetForm = () => {
     setForm({
@@ -235,7 +243,7 @@ export default function LancamentosPage() {
                 onChange={(e) => setForm({ ...form, gameId: e.target.value })}
               >
                 <option value="">Jogo</option>
-                {games.map((g) => (
+                {openGames.map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.opponent || "Sem adversário"} -{" "}
                     {new Date(g.date).toLocaleDateString()}
