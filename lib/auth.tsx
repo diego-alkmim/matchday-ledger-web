@@ -3,6 +3,7 @@ import React from "react";
 import { create } from "zustand";
 import api from "../app/api-client";
 import { toast } from "sonner";
+import { ApiEnvelope, getApiErrorMessage } from "./api-types";
 
 type User = {
   id: string;
@@ -19,6 +20,12 @@ type State = {
   clear: () => void;
   setHydrated: (v: boolean) => void;
   setCsrf: (v?: string) => void;
+};
+
+type AuthSession = {
+  user: User;
+  accessToken: string;
+  csrfToken?: string;
 };
 
 const store = create<State>((set) => ({
@@ -41,17 +48,16 @@ export const getCsrfToken = () => store.getState().csrfToken;
 
 export async function login(email: string, password: string) {
   try {
-    const resp = await api.post("/auth/login", { email, password });
-    const csrf = resp.data.data?.csrfToken as string | undefined;
+    const resp = await api.post<ApiEnvelope<AuthSession>>("/auth/login", { email, password });
+    const csrf = resp.data.data.csrfToken;
     if (csrf) sessionStorage.setItem("csrf_token", csrf);
     store
       .getState()
       .setSession(resp.data.data.user, resp.data.data.accessToken, csrf || "");
     toast.success("Bem-vindo(a) de volta!");
-  } catch (e: any) {
-    const msg = e?.response?.data?.message || "Credenciais inválidas";
-    toast.error(msg);
-    throw e;
+  } catch (error) {
+    toast.error(getApiErrorMessage(error, "Credenciais inválidas"));
+    throw error;
   }
 }
 
@@ -59,12 +65,12 @@ export async function refreshSession() {
   const csrf =
     store.getState().csrfToken || sessionStorage.getItem("csrf_token") || "";
   if (!csrf) throw new Error("Missing CSRF for refresh");
-  const resp = await api.post(
+  const resp = await api.post<ApiEnvelope<AuthSession>>(
     "/auth/refresh",
     { csrfToken: csrf },
     { headers: { "x-csrf-token": csrf } },
   );
-  const newCsrf = resp.data.data?.csrfToken as string | undefined;
+  const newCsrf = resp.data.data.csrfToken;
   if (newCsrf) sessionStorage.setItem("csrf_token", newCsrf);
   store
     .getState()
@@ -78,9 +84,9 @@ export async function refreshSession() {
 export async function logout() {
   try {
     await api.post("/auth/logout");
-  } catch (e: any) {
-    // Se a API estiver offline, ainda encerramos a sessão localmente
-    toast.warning("Conexão indisponível. Sessão encerrada apenas no dispositivo.");
+  } catch {
+    // Se a API estiver offline, ainda encerramos a sessÃ£o localmente
+    toast.warning("ConexÃ£o indisponÃ­vel. SessÃ£o encerrada apenas no dispositivo.");
   } finally {
     store.getState().clear();
     sessionStorage.removeItem("csrf_token");

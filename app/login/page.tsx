@@ -1,9 +1,10 @@
 ﻿"use client";
-import { useState, useMemo, useEffect } from "react";
+import { FormEvent, useState, useMemo, useEffect } from "react";
 import { login, useAuth } from "../../lib/auth";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { getApiErrorMessage } from "../../lib/api-types";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -20,8 +21,8 @@ export default function LoginPage() {
     if (user) router.replace("/dashboard");
   }, [user, router]);
 
-  const submit = async (e: any) => {
-    e.preventDefault();
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!validEmail) {
       toast.error("Informe um e-mail válido");
       return;
@@ -34,9 +35,8 @@ export default function LoginPage() {
       setLoading(true);
       await login(email.trim(), password);
       router.replace("/dashboard");
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Credenciais inválidas";
-      toast.error(msg);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Credenciais inválidas"));
     } finally {
       setLoading(false);
     }
@@ -46,7 +46,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-xl bg-slate-900/70 p-6 shadow-xl">
+      <form onSubmit={(event) => void submit(event)} className="w-full max-w-sm space-y-4 rounded-xl bg-slate-900/70 p-6 shadow-xl">
         <h1 className="text-2xl font-semibold text-white">Entrar</h1>
         <input
           className="w-full rounded bg-slate-800 px-3 py-2"

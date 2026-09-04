@@ -4,6 +4,7 @@ import { ProtectedPage } from "../../components/nav/sidebar";
 import api from "../api-client";
 import { useAuth } from "../../lib/auth";
 import { toast } from "sonner";
+import { ApiEnvelope, getApiErrorMessage } from "../../lib/api-types";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -39,22 +40,22 @@ export default function JogosPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get("/games");
+      const { data } = await api.get<ApiEnvelope<Game[]>>("/games");
       const list: Game[] = data.data || [];
       // ordena por data desc
       list.sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
       );
       setGames(list);
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao carregar jogos");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao carregar jogos"));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
   const buildIso = (date: Date | null, time: Date | null) => {
@@ -90,9 +91,9 @@ export default function JogosPage() {
       setSelectedDate(null);
       setSelectedTime(null);
       setEditingId(null);
-      load();
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao salvar jogo");
+      void load();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao salvar jogo"));
     }
   };
 
@@ -112,9 +113,9 @@ export default function JogosPage() {
     try {
       await api.delete(`/games/${id}`);
       toast.success("Jogo removido");
-      load();
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao remover");
+      void load();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao remover"));
     }
   };
 
@@ -130,7 +131,7 @@ export default function JogosPage() {
               <div className="rounded bg-slate-800 px-3 py-2">
                 <DatePicker
                   selected={selectedDate}
-                  onChange={(date) => setSelectedDate(date)}
+                  onChange={(date: Date | null) => setSelectedDate(date)}
                   dateFormat="dd/MM/yyyy"
                   placeholderText="Data"
                   className="w-full bg-transparent focus:outline-none text-slate-100"
@@ -142,7 +143,7 @@ export default function JogosPage() {
               <div className="rounded bg-slate-800 px-3 py-2">
                 <DatePicker
                   selected={selectedTime}
-                  onChange={(date) => setSelectedTime(date)}
+                  onChange={(date: Date | null) => setSelectedTime(date)}
                   showTimeSelect
                   showTimeSelectOnly
                   timeIntervals={15}
@@ -180,7 +181,7 @@ export default function JogosPage() {
             </div>
             <div className="mt-3 flex gap-2">
               <button
-                onClick={submit}
+                onClick={() => void submit()}
                 className="rounded bg-emerald-500 px-4 py-2 font-semibold text-slate-900 hover:bg-emerald-400"
               >
                 {editingId ? "Salvar alterações" : "Cadastrar"}
@@ -236,7 +237,7 @@ export default function JogosPage() {
                       Editar
                     </button>
                     <button
-                      onClick={() => onDelete(g.id)}
+                      onClick={() => void onDelete(g.id)}
                       className="rounded bg-rose-600 px-3 py-1 text-sm text-white hover:bg-rose-500"
                     >
                       Excluir

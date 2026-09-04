@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ProtectedPage } from "../../components/nav/sidebar";
 import api from "../api-client";
 import { useAuth } from "../../lib/auth";
+import { ApiEnvelope, getApiErrorMessage } from "../../lib/api-types";
 import { toast } from "sonner";
 
 interface Director {
@@ -23,17 +24,17 @@ export default function Diretores() {
   const load = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get("/directors");
+      const { data } = await api.get<ApiEnvelope<Director[]>>("/directors");
       setDirectors(data.data);
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao carregar diretores");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao carregar diretores"));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
   const submit = async () => {
@@ -47,9 +48,9 @@ export default function Diretores() {
       }
       setForm({ name: "", contact: "" });
       setEditingId(null);
-      load();
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao salvar");
+      void load();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao salvar"));
     }
   };
 
@@ -62,9 +63,9 @@ export default function Diretores() {
     try {
       await api.delete(`/directors/${id}`);
       toast.success("Diretor removido");
-      load();
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao remover");
+      void load();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao remover"));
     }
   };
 
@@ -92,7 +93,7 @@ export default function Diretores() {
             </div>
             <div className="mt-3 flex gap-2">
               <button
-                onClick={submit}
+                onClick={() => void submit()}
                 className="rounded bg-emerald-500 px-4 py-2 font-semibold text-slate-900 hover:bg-emerald-400"
               >
                 {editingId ? "Salvar alterações" : "Cadastrar"}
@@ -140,7 +141,7 @@ export default function Diretores() {
                       Editar
                     </button>
                     <button
-                      onClick={() => onDelete(d.id)}
+                      onClick={() => void onDelete(d.id)}
                       className="rounded bg-rose-600 px-3 py-1 text-sm text-white hover:bg-rose-500"
                     >
                       Excluir

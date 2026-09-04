@@ -5,7 +5,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:types": "eslint --config eslint.typed.config.mjs ."
   },
   "dependencies": {
     "@types/react-datepicker": "^7.0.0",
@@ -23,13 +25,17 @@
     "zustand": "^4.4.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/node": "20.5.0",
     "@types/react": "18.2.21",
     "@types/react-dom": "18.2.7",
     "autoprefixer": "^10.4.15",
     "cross-env": "^7.0.3",
+    "eslint": "^9.39.5",
+    "globals": "^17.12.0",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.5",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "typescript-eslint": "^8.69.0"
   }
 }

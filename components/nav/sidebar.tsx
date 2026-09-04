@@ -65,7 +65,7 @@ export function ProtectedPage({ children }: { children: React.ReactNode }) {
         </div>
         <div className="pt-2 border-t border-slate-800">
           <button
-            onClick={handleLogout}
+            onClick={() => void handleLogout()}
             className="w-full inline-flex items-center justify-center gap-2 rounded px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white font-medium"
           >
             <LogOut size={16} /> Sair

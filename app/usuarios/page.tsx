@@ -4,6 +4,7 @@ import api from "../api-client";
 import { ProtectedPage } from "../../components/nav/sidebar";
 import { toast } from "sonner";
 import { useAuth } from "../../lib/auth";
+import { ApiEnvelope, getApiErrorMessage } from "../../lib/api-types";
 
 type Role = "ADMIN" | "DIRETOR";
 type Director = { id: string; name: string };
@@ -29,7 +30,7 @@ export default function UsuariosPage() {
   useEffect(() => {
     if (!isAdmin) return;
     api
-      .get("/directors")
+      .get<ApiEnvelope<Director[]>>("/directors")
       .then((resp) => setDirectors(resp.data.data || []))
       .catch(() => toast.error("Erro ao carregar diretores"));
   }, [isAdmin]);
@@ -38,16 +39,16 @@ export default function UsuariosPage() {
     e.preventDefault();
     if (!isAdmin) return;
     if (!canSubmit) {
-      toast.error("Preencha e-mail e senha (mínimo 8 caracteres)");
+      toast.error("Preencha e-mail e senha (mÃ­nimo 8 caracteres)");
       return;
     }
     try {
       setLoading(true);
       await api.post("/users", form);
-      toast.success("Usuário criado com sucesso");
+      toast.success("UsuÃ¡rio criado com sucesso");
       setForm({ email: "", password: "", role: "DIRETOR", directorId: "" });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Erro ao criar usuário");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao criar usuário"));
     } finally {
       setLoading(false);
     }
@@ -64,8 +65,8 @@ export default function UsuariosPage() {
   return (
     <ProtectedPage>
       <div className="max-w-xl rounded bg-slate-900 border border-slate-800 p-4 space-y-4">
-        <h1 className="text-xl font-semibold text-white">Criar usuário</h1>
-        <form className="space-y-3" onSubmit={submit}>
+        <h1 className="text-xl font-semibold text-white">Criar usuÃ¡rio</h1>
+        <form className="space-y-3" onSubmit={(event) => void submit(event)}>
           <input
             className="w-full rounded bg-slate-800 px-3 py-2 text-slate-100"
             placeholder="E-mail"
@@ -75,7 +76,7 @@ export default function UsuariosPage() {
           />
           <input
             className="w-full rounded bg-slate-800 px-3 py-2 text-slate-100"
-            placeholder="Senha (mín. 8 caracteres)"
+            placeholder="Senha (mÃ­n. 8 caracteres)"
             type="password"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -99,7 +100,7 @@ export default function UsuariosPage() {
             >
               <option value="">
                 {form.role === "ADMIN"
-                  ? "Admin não vincula diretor"
+                  ? "Admin nÃ£o vincula diretor"
                   : "Vincular a diretor"}
               </option>
               {directors.map((d) => (
@@ -114,10 +115,10 @@ export default function UsuariosPage() {
             disabled={!canSubmit || loading}
             className="w-full rounded bg-emerald-500 py-2 font-semibold text-slate-900 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Criando..." : "Criar usuário"}
+            {loading ? "Criando..." : "Criar usuÃ¡rio"}
           </button>
           <p className="text-xs text-slate-400">
-            * Usuários ADMIN não precisam de diretor vinculado.
+            * UsuÃ¡rios ADMIN nÃ£o precisam de diretor vinculado.
           </p>
         </form>
       </div>

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ProtectedPage } from "../../components/nav/sidebar";
 import api from "../api-client";
 import { useAuth } from "../../lib/auth";
+import { ApiEnvelope, getApiErrorMessage } from "../../lib/api-types";
 import { toast } from "sonner";
 
 interface Category {
@@ -24,16 +25,16 @@ export default function CategoriasPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get("/categories");
+      const { data } = await api.get<ApiEnvelope<Category[]>>("/categories");
       setCategories(data.data || []);
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao carregar categorias");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao carregar categorias"));
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, []);
 
   const submit = async () => {
     try {
@@ -51,9 +52,9 @@ export default function CategoriasPage() {
       }
       setForm({ name: "", active: true, type: "SAIDA" });
       setEditingId(null);
-      load();
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao salvar categoria");
+      void load();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao salvar categoria"));
     }
   };
 
@@ -66,9 +67,9 @@ export default function CategoriasPage() {
     try {
       await api.delete(`/categories/${id}`);
       toast.success("Categoria removida");
-      load();
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao remover");
+      void load();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao remover"));
     }
   };
 
@@ -105,7 +106,7 @@ export default function CategoriasPage() {
             </div>
             <div className="mt-3 flex gap-2">
               <button
-                onClick={submit}
+                onClick={() => void submit()}
                 className="rounded bg-emerald-500 px-4 py-2 font-semibold text-slate-900 hover:bg-emerald-400"
               >
                 {editingId ? "Salvar alterações" : "Cadastrar"}
@@ -137,7 +138,7 @@ export default function CategoriasPage() {
                 {isAdmin && (
                   <div className="flex gap-2 mt-2 md:mt-0">
                     <button onClick={() => onEdit(c)} className="rounded bg-slate-700 px-3 py-1 text-sm hover:bg-slate-600">Editar</button>
-                    <button onClick={() => onDelete(c.id)} className="rounded bg-rose-600 px-3 py-1 text-sm text-white hover:bg-rose-500">Excluir</button>
+                    <button onClick={() => void onDelete(c.id)} className="rounded bg-rose-600 px-3 py-1 text-sm text-white hover:bg-rose-500">Excluir</button>
                   </div>
                 )}
               </div>

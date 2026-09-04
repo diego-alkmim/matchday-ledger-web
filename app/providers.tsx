@@ -6,7 +6,7 @@ import { useEffect } from "react";
 
 export function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
-    initAuth();
+    void initAuth();
   }, []);
 
   return (
