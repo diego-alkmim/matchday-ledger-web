@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import axios, { InternalAxiosRequestConfig } from "axios";
 import { getAccessToken, refreshSession, logout } from "../lib/auth";
@@ -37,7 +37,7 @@ api.interceptors.response.use(
         config.__isRetry = true;
         return await api.request(config);
       } catch {
-        await logout();
+        await logout({ notifyOnNetworkError: false });
       } finally {
         refreshing = false;
       }
