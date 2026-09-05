@@ -81,12 +81,14 @@ export async function refreshSession() {
     );
 }
 
-export async function logout() {
+export async function logout({ notifyOnNetworkError = true }: { notifyOnNetworkError?: boolean } = {}) {
   try {
     await api.post("/auth/logout");
   } catch {
     // Se a API estiver offline, ainda encerramos a sessÃ£o localmente
-    toast.warning("ConexÃ£o indisponÃ­vel. SessÃ£o encerrada apenas no dispositivo.");
+    if (notifyOnNetworkError) {
+      toast.warning("ConexÃ£o indisponÃ­vel. SessÃ£o encerrada apenas no dispositivo.");
+    }
   } finally {
     store.getState().clear();
     sessionStorage.removeItem("csrf_token");

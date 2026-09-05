@@ -54,3 +54,25 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
 .react-datepicker__time-list-item--disabled {
   color: #475569 !important;
 }
+
+.login-page {
+  font-family: "Trebuchet MS", "Gill Sans", sans-serif;
+}
+
+.login-display {
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.015em;
+}
+
+.login-grid {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+}
+
+.login-pitch {
+  box-shadow: inset 0 0 90px rgba(16, 185, 129, 0.08);
+}

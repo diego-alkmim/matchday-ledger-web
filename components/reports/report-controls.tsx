@@ -1,101 +1,16 @@
-﻿import type { GameOption, ReportFilters, ReportType } from "../../app/relatorios/report-types";
+import { BarChart3, CalendarRange, Filter, UsersRound } from "lucide-react";
+import { fieldClassName, FormField, PageHeader, Surface } from "../ui/page-primitives";
+import type { GameOption, ReportFilters, ReportType } from "../../app/relatorios/report-types";
 import { formatDate } from "./report-utils";
 
-type ReportControlsProps = {
-  selectedReport: ReportType | null;
-  filters: ReportFilters;
-  games: GameOption[];
-  gamesLoading: boolean;
-  loading: boolean;
-  onSelect: (report: ReportType) => void;
-  onFiltersChange: (filters: ReportFilters) => void;
-  onApply: () => void;
-};
+type ReportControlsProps = { selectedReport: ReportType | null; filters: ReportFilters; games: GameOption[]; gamesLoading: boolean; loading: boolean; onSelect: (report: ReportType) => void; onFiltersChange: (filters: ReportFilters) => void; onApply: () => void; };
+const reportOptions: Array<{ id: ReportType; title: string; description: string; icon: typeof BarChart3 }> = [{ id: "analytical", title: "Analítico por jogo", description: "Entradas e saídas agrupadas por categoria em cada partida.", icon: BarChart3 }, { id: "consolidated", title: "Consolidado por diretor", description: "Adimplência dos diretores considerando a categoria Diretoria.", icon: UsersRound }];
 
-const reportOptions: Array<{ id: ReportType; title: string; description: string }> = [
-  {
-    id: "analytical",
-    title: "Analítico por jogo",
-    description: "Detalha entradas e saídas por jogo, com agrupamento por categoria.",
-  },
-  {
-    id: "consolidated",
-    title: "Consolidado por diretor",
-    description: "Mostra adimplência dos diretores considerando apenas a categoria Diretoria.",
-  },
-];
-
-export function ReportControls({
-  selectedReport,
-  filters,
-  games,
-  gamesLoading,
-  loading,
-  onSelect,
-  onFiltersChange,
-  onApply,
-}: ReportControlsProps) {
-  const updateFilter = (name: keyof ReportFilters, value: string) => {
-    onFiltersChange({ ...filters, [name]: value });
-  };
-
-  return (
-    <>
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 md:p-5">
-        <h1 className="text-xl font-semibold text-white">{"Relatórios"}</h1>
-        <p className="text-sm text-slate-400">
-          Selecione o relatório que deseja consultar e carregue os dados sob demanda.
-        </p>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {reportOptions.map((option) => {
-            const active = selectedReport === option.id;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => onSelect(option.id)}
-                className={`rounded-xl border p-4 text-left transition ${
-                  active
-                    ? "border-emerald-500/60 bg-emerald-500/10"
-                    : "border-slate-800 bg-slate-900 hover:border-slate-700 hover:bg-slate-800/70"
-                }`}
-              >
-                <p className="text-base font-semibold text-white">{option.title}</p>
-                <p className="mt-1 text-sm text-slate-400">{option.description}</p>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 md:p-5">
-        <div className="mb-4">
-          <h2 className="text-base font-semibold text-white">Filtros</h2>
-          <p className="text-sm text-slate-400">
-            Os dados só são carregados depois de selecionar o relatório e aplicar os filtros.
-          </p>
-        </div>
-        <div className="grid gap-3 md:grid-cols-4">
-          <input type="date" className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100" value={filters.from} onChange={(event) => updateFilter("from", event.target.value)} />
-          <input type="date" className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100" value={filters.to} onChange={(event) => updateFilter("to", event.target.value)} />
-          {selectedReport === "analytical" ? (
-            <select className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100" value={filters.gameId} onChange={(event) => updateFilter("gameId", event.target.value)} disabled={gamesLoading}>
-              <option value="">Todos os jogos</option>
-              {games.map((game) => (
-                <option key={game.id} value={game.id}>
-                  {(game.opponent || "Sem adversário") + " - " + formatDate(game.date)}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input type="number" min="0" step="0.01" className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100" value={filters.expectedPerGame} onChange={(event) => updateFilter("expectedPerGame", event.target.value)} placeholder="Valor esperado por jogo" />
-          )}
-          <button onClick={onApply} disabled={loading || !selectedReport} className="rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50">
-            {loading ? "Carregando..." : "Aplicar filtros"}
-          </button>
-        </div>
-      </div>
-    </>
-  );
+export function ReportControls({ selectedReport, filters, games, gamesLoading, loading, onSelect, onFiltersChange, onApply }: ReportControlsProps) {
+  const updateFilter = (name: keyof ReportFilters, value: string) => onFiltersChange({ ...filters, [name]: value });
+  return <div className="space-y-6">
+    <PageHeader eyebrow="Inteligência financeira" title="Relatórios" description="Selecione a visão desejada e carregue apenas os dados necessários." aside={<span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-semibold text-emerald-200">Dados sob demanda</span>} />
+    <Surface className="p-5"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-300/10 text-sky-300"><BarChart3 size={19} /></span><div><h2 className="font-bold text-white">Escolha a visão</h2><p className="mt-0.5 text-sm text-slate-400">Cada relatório possui filtros específicos para sua análise.</p></div></div><div className="mt-5 grid gap-3 md:grid-cols-2">{reportOptions.map((option) => { const Icon = option.icon; const active = selectedReport === option.id; return <button key={option.id} type="button" onClick={() => onSelect(option.id)} className={`rounded-2xl border p-5 text-left transition ${active ? "border-emerald-300/50 bg-emerald-300/[0.09] shadow-lg shadow-emerald-950/10" : "border-white/10 bg-slate-950/20 hover:border-slate-600 hover:bg-white/[0.04]"}`}><div className="flex items-start justify-between gap-3"><span className={`flex h-10 w-10 items-center justify-center rounded-xl ${active ? "bg-emerald-300 text-slate-950" : "bg-white/5 text-slate-400"}`}><Icon size={19} /></span>{active && <span className="rounded-full bg-emerald-300/15 px-2.5 py-1 text-xs font-bold text-emerald-200">Selecionado</span>}</div><h3 className="mt-5 font-bold text-white">{option.title}</h3><p className="mt-1 text-sm leading-6 text-slate-400">{option.description}</p></button>; })}</div></Surface>
+    <Surface><div className="flex items-center gap-3 border-b border-white/10 px-5 py-5"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-300/10 text-amber-300"><Filter size={19} /></span><div><h2 className="font-bold text-white">Filtros</h2><p className="mt-0.5 text-sm text-slate-400">Defina o período e os critérios antes de gerar o relatório.</p></div></div><div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4"><FormField label="Data inicial"><input type="date" className={fieldClassName} value={filters.from} onChange={(event) => updateFilter("from", event.target.value)} /></FormField><FormField label="Data final"><input type="date" className={fieldClassName} value={filters.to} onChange={(event) => updateFilter("to", event.target.value)} /></FormField>{selectedReport === "analytical" ? <FormField label="Jogo"><select className={fieldClassName} value={filters.gameId} onChange={(event) => updateFilter("gameId", event.target.value)} disabled={gamesLoading}><option value="">Todos os jogos</option>{games.map((game) => <option key={game.id} value={game.id}>{(game.opponent || "Sem adversário") + " - " + formatDate(game.date)}</option>)}</select></FormField> : <FormField label="Valor esperado por jogo"><input type="number" min="0" step="0.01" className={fieldClassName} value={filters.expectedPerGame} onChange={(event) => updateFilter("expectedPerGame", event.target.value)} placeholder="Ex.: 70,00" /></FormField>}<div className="flex items-end"><button onClick={onApply} disabled={loading || !selectedReport} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-300 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-emerald-300/40"><CalendarRange size={17} />{loading ? "Gerando relatório..." : "Aplicar filtros"}</button></div></div></Surface>
+  </div>;
 }
-
