@@ -1,6 +1,9 @@
 {
   "name": "matchday-ledger-web",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
