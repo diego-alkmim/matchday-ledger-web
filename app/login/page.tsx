@@ -37,6 +37,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState("");
   const [turnstileReady, setTurnstileReady] = useState(false);
+  const [turnstileRequested, setTurnstileRequested] = useState(false);
+  const [turnstileExecutionKey, setTurnstileExecutionKey] = useState(0);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const turnstileRef = useRef<TurnstileWidgetHandle>(null);
   const emailId = useId();
@@ -55,8 +57,7 @@ export default function LoginPage() {
   const canSubmit =
     validEmail &&
     password.trim().length >= 8 &&
-    Boolean(turnstileSiteKey) &&
-    turnstileReady;
+    Boolean(turnstileSiteKey);
 
   const handleTurnstileError = useCallback(() => {
     setLoading(false);
@@ -71,6 +72,17 @@ export default function LoginPage() {
   useEffect(() => {
     if (user) router.replace("/dashboard");
   }, [user, router]);
+
+  useEffect(() => {
+    if (!turnstileRequested || !turnstileReady || !turnstileExecutionKey) {
+      return;
+    }
+
+    if (!turnstileRef.current?.execute()) {
+      setLoading(false);
+      setFormError("A verificação de segurança ainda está carregando. Tente novamente em instantes.");
+    }
+  }, [turnstileExecutionKey, turnstileReady, turnstileRequested]);
 
   const completeLogin = useCallback(async (turnstileToken: string) => {
     try {
@@ -101,13 +113,15 @@ export default function LoginPage() {
       return;
     }
 
-    if (!turnstileRef.current?.execute()) {
-      setFormError("A verificação de segurança ainda está carregando. Tente novamente em instantes.");
+    if (!turnstileSiteKey) {
+      setFormError("A verificação de segurança não está configurada.");
       return;
     }
 
     setFormError("");
     setLoading(true);
+    setTurnstileRequested(true);
+    setTurnstileExecutionKey((value) => value + 1);
   };
 
   if (user) return null;
@@ -242,11 +256,11 @@ export default function LoginPage() {
                   </p>
                 </div>
 
-                <div>
-                  <p className="mb-2 text-sm font-semibold text-slate-200">
-                    Verificação de segurança
-                  </p>
-                  {turnstileSiteKey ? (
+                {turnstileRequested ? (
+                  <div>
+                    <p className="mb-2 text-sm font-semibold text-slate-200">
+                      Verificação de segurança
+                    </p>
                     <TurnstileWidget
                       ref={turnstileRef}
                       siteKey={turnstileSiteKey}
@@ -256,17 +270,17 @@ export default function LoginPage() {
                       onError={handleTurnstileError}
                       onReady={() => setTurnstileReady(true)}
                     />
-                  ) : (
+                    <p className="mt-2 text-xs text-slate-500">
+                      {turnstileReady
+                        ? "Conclua a verificação para proteger o acesso contra tentativas automatizadas."
+                        : "Preparando a verificação de segurança..."}
+                    </p>
+                  </div>
+                ) : !turnstileSiteKey ? (
                     <div className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
                       A verificação de segurança não está configurada.
                     </div>
-                  )}
-                  <p className="mt-2 text-xs text-slate-500">
-                    {turnstileReady
-                      ? "A verificação será feita ao entrar para proteger o acesso contra tentativas automatizadas."
-                      : "Preparando a verificação de segurança..."}
-                  </p>
-                </div>
+                ) : null}
               </div>
 
               <div className="mt-5 min-h-5" aria-live="polite">
