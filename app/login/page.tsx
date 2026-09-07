@@ -1,6 +1,14 @@
 ﻿"use client";
 
-import { FormEvent, useCallback, useEffect, useId, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
@@ -14,7 +22,11 @@ import {
 } from "lucide-react";
 import { login, useAuth } from "../../lib/auth";
 import { getApiErrorMessage } from "../../lib/api-types";
-import { TurnstileWidget } from "../../components/auth/turnstile-widget";
+import {
+  TurnstileWidget,
+  TurnstileWidgetHandle,
+} from "../../components/auth/turnstile-widget";
+import { LoginPitch } from "../../components/auth/login-pitch";
 
 const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA";
 
@@ -24,8 +36,9 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState("");
-  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileReady, setTurnstileReady] = useState(false);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
   const emailId = useId();
   const passwordId = useId();
   const router = useRouter();
@@ -39,18 +52,43 @@ export default function LoginPage() {
     password.length > 0 && password.trim().length < 8
       ? "A senha deve ter pelo menos 8 caracteres."
       : "";
-  const canSubmit = validEmail && password.trim().length >= 8 && Boolean(turnstileToken);
+  const canSubmit =
+    validEmail &&
+    password.trim().length >= 8 &&
+    Boolean(turnstileSiteKey) &&
+    turnstileReady;
 
   const handleTurnstileError = useCallback(() => {
-    setTurnstileToken("");
+    setLoading(false);
     setFormError("Não foi possível carregar a verificação de segurança. Atualize a página e tente novamente.");
+  }, []);
+
+  const handleTurnstileExpired = useCallback(() => {
+    setLoading(false);
+    setFormError("A verificação de segurança expirou. Clique em Entrar para tentar novamente.");
   }, []);
 
   useEffect(() => {
     if (user) router.replace("/dashboard");
   }, [user, router]);
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
+  const completeLogin = useCallback(async (turnstileToken: string) => {
+    try {
+      await login(email.trim(), password, turnstileToken);
+      router.replace("/dashboard");
+    } catch (error) {
+      const message = getApiErrorMessage(
+        error,
+        "Não foi possível validar suas credenciais.",
+      );
+      setFormError(message);
+      setTurnstileResetKey((value) => value + 1);
+    } finally {
+      setLoading(false);
+    }
+  }, [email, password, router]);
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!validEmail) {
@@ -63,27 +101,13 @@ export default function LoginPage() {
       return;
     }
 
-    if (!turnstileToken) {
-      setFormError("Conclua a verificação de segurança para entrar.");
+    if (!turnstileRef.current?.execute()) {
+      setFormError("A verificação de segurança ainda está carregando. Tente novamente em instantes.");
       return;
     }
 
-    try {
-      setLoading(true);
-      setFormError("");
-      await login(email.trim(), password, turnstileToken);
-      router.replace("/dashboard");
-    } catch (error) {
-      const message = getApiErrorMessage(
-        error,
-        "Não foi possível validar suas credenciais.",
-      );
-      setFormError(message);
-      setTurnstileToken("");
-      setTurnstileResetKey((value) => value + 1);
-    } finally {
-      setLoading(false);
-    }
+    setFormError("");
+    setLoading(true);
   };
 
   if (user) return null;
@@ -94,56 +118,7 @@ export default function LoginPage() {
       <div className="login-grid pointer-events-none absolute inset-0 opacity-40" />
 
       <section className="relative mx-auto grid min-h-screen max-w-7xl lg:grid-cols-[1.12fr_0.88fr]">
-        <div className="relative hidden overflow-hidden border-r border-white/10 px-12 py-12 lg:flex lg:flex-col">
-          <div className="flex items-center gap-3 text-sm font-semibold tracking-[0.2em] text-emerald-300">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-300/30 bg-emerald-300/10">
-              <Sparkles size={19} aria-hidden="true" />
-            </span>
-            MATCHDAY LEDGER
-          </div>
-
-          <div className="relative z-10 my-auto max-w-xl py-16">
-            <p className="mb-5 text-sm font-semibold uppercase tracking-[0.22em] text-emerald-300">
-              O caixa também joga junto
-            </p>
-            <h1 className="login-display text-6xl leading-[0.94] text-white xl:text-7xl">
-              Controle o jogo
-              <span className="block text-emerald-300">
-                fora das quatro linhas.
-              </span>
-            </h1>
-            <p className="mt-7 max-w-md text-lg leading-8 text-slate-300">
-              Entradas, saídas e prestação de contas em uma única visão para o
-              seu time.
-            </p>
-
-            <div className="mt-10 flex flex-wrap gap-3 text-sm text-slate-200">
-              <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
-                Caixa por jogo
-              </div>
-              <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
-                Relatórios claros
-              </div>
-              <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
-                Acesso protegido
-              </div>
-            </div>
-          </div>
-
-          <div className="relative z-10 flex items-center gap-3 text-sm text-slate-400">
-            <ShieldCheck
-              className="text-emerald-300"
-              size={20}
-              aria-hidden="true"
-            />
-            Dados financeiros protegidos e centralizados.
-          </div>
-
-          <div className="login-pitch pointer-events-none absolute -bottom-32 -right-24 h-[32rem] w-[32rem] rounded-full border border-emerald-200/20" />
-          <div className="login-pitch pointer-events-none absolute -bottom-8 -right-4 h-72 w-72 rounded-full border border-emerald-200/15" />
-          <div className="pointer-events-none absolute bottom-0 right-[8.8rem] h-56 w-px bg-emerald-200/20" />
-          <div className="pointer-events-none absolute bottom-28 right-0 h-px w-80 bg-emerald-200/20" />
-        </div>
+        <LoginPitch />
 
         <div className="relative flex items-center px-5 py-8 sm:px-10 lg:px-14">
           <div className="mx-auto w-full max-w-md">
@@ -273,10 +248,13 @@ export default function LoginPage() {
                   </p>
                   {turnstileSiteKey ? (
                     <TurnstileWidget
+                      ref={turnstileRef}
                       siteKey={turnstileSiteKey}
                       resetKey={turnstileResetKey}
-                      onTokenChange={setTurnstileToken}
+                      onSuccess={(token) => void completeLogin(token)}
+                      onExpired={handleTurnstileExpired}
                       onError={handleTurnstileError}
+                      onReady={() => setTurnstileReady(true)}
                     />
                   ) : (
                     <div className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
@@ -284,7 +262,9 @@ export default function LoginPage() {
                     </div>
                   )}
                   <p className="mt-2 text-xs text-slate-500">
-                    Esta etapa protege o acesso contra tentativas automatizadas.
+                    {turnstileReady
+                      ? "A verificação será feita ao entrar para proteger o acesso contra tentativas automatizadas."
+                      : "Preparando a verificação de segurança..."}
                   </p>
                 </div>
               </div>
