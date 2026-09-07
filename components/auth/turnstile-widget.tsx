@@ -1,12 +1,19 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useRef } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+} from "react";
 
 type TurnstileOptions = {
   sitekey: string;
   theme: "dark";
   size: "flexible";
+  execution: "execute";
+  appearance: "execute";
   callback: (token: string) => void;
   "expired-callback": () => void;
   "error-callback": () => void;
@@ -14,6 +21,7 @@ type TurnstileOptions = {
 
 type TurnstileApi = {
   render: (element: HTMLElement, options: TurnstileOptions) => string;
+  execute: (widgetId?: string) => void;
   reset: (widgetId?: string) => void;
   remove: (widgetId: string) => void;
 };
@@ -27,25 +35,34 @@ declare global {
 type TurnstileWidgetProps = {
   siteKey: string;
   resetKey: number;
-  onTokenChange: (token: string) => void;
+  onSuccess: (token: string) => void;
+  onExpired: () => void;
   onError: () => void;
+  onReady: () => void;
 };
 
-export function TurnstileWidget({
-  siteKey,
-  resetKey,
-  onTokenChange,
-  onError,
-}: TurnstileWidgetProps) {
+export type TurnstileWidgetHandle = {
+  execute: () => boolean;
+};
+
+export const TurnstileWidget = forwardRef<
+  TurnstileWidgetHandle,
+  TurnstileWidgetProps
+>(function TurnstileWidget(
+  { siteKey, resetKey, onSuccess, onExpired, onError, onReady },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | undefined>(undefined);
-  const onTokenChangeRef = useRef(onTokenChange);
+  const onSuccessRef = useRef(onSuccess);
+  const onExpiredRef = useRef(onExpired);
   const onErrorRef = useRef(onError);
 
   useEffect(() => {
-    onTokenChangeRef.current = onTokenChange;
+    onSuccessRef.current = onSuccess;
+    onExpiredRef.current = onExpired;
     onErrorRef.current = onError;
-  }, [onError, onTokenChange]);
+  }, [onError, onExpired, onSuccess]);
 
   const renderWidget = () => {
     const turnstile = window.turnstile;
@@ -55,14 +72,29 @@ export function TurnstileWidget({
       sitekey: siteKey,
       theme: "dark",
       size: "flexible",
-      callback: (token) => onTokenChangeRef.current(token),
-      "expired-callback": () => onTokenChangeRef.current(""),
+      execution: "execute",
+      appearance: "execute",
+      callback: (token) => onSuccessRef.current(token),
+      "expired-callback": () => onExpiredRef.current(),
       "error-callback": () => {
-        onTokenChangeRef.current("");
         onErrorRef.current();
       },
     });
+    onReady();
   };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      execute: () => {
+        if (!widgetIdRef.current || !window.turnstile) return false;
+
+        window.turnstile.execute(widgetIdRef.current);
+        return true;
+      },
+    }),
+    [],
+  );
 
   useEffect(() => {
     if (window.turnstile) renderWidget();
@@ -92,4 +124,4 @@ export function TurnstileWidget({
       <div ref={containerRef} className="min-h-[65px]" />
     </>
   );
-}
+});
