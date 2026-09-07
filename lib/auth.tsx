@@ -46,9 +46,13 @@ const store = create<State>((set) => ({
 export const getAccessToken = () => store.getState().accessToken;
 export const getCsrfToken = () => store.getState().csrfToken;
 
-export async function login(email: string, password: string) {
+export async function login(email: string, password: string, turnstileToken: string) {
   try {
-    const resp = await api.post<ApiEnvelope<AuthSession>>("/auth/login", { email, password });
+    const resp = await api.post<ApiEnvelope<AuthSession>>("/auth/login", {
+      email,
+      password,
+      turnstileToken,
+    });
     const csrf = resp.data.data.csrfToken;
     if (csrf) sessionStorage.setItem("csrf_token", csrf);
     store

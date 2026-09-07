@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { FormEvent, useEffect, useId, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { login, useAuth } from "../../lib/auth";
 import { getApiErrorMessage } from "../../lib/api-types";
+import { TurnstileWidget } from "../../components/auth/turnstile-widget";
+
+const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -21,10 +24,14 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const emailId = useId();
   const passwordId = useId();
   const router = useRouter();
   const { user } = useAuth();
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
+    (process.env.NODE_ENV !== "production" ? TURNSTILE_TEST_SITE_KEY : "");
 
   const validEmail = useMemo(() => /.+@.+\..+/.test(email.trim()), [email]);
   const emailError = email.trim() && !validEmail ? "Use um e-mail válido, como nome@time.com." : "";
@@ -32,7 +39,12 @@ export default function LoginPage() {
     password.length > 0 && password.trim().length < 8
       ? "A senha deve ter pelo menos 8 caracteres."
       : "";
-  const canSubmit = validEmail && password.trim().length >= 8;
+  const canSubmit = validEmail && password.trim().length >= 8 && Boolean(turnstileToken);
+
+  const handleTurnstileError = useCallback(() => {
+    setTurnstileToken("");
+    setFormError("Não foi possível carregar a verificação de segurança. Atualize a página e tente novamente.");
+  }, []);
 
   useEffect(() => {
     if (user) router.replace("/dashboard");
@@ -51,10 +63,15 @@ export default function LoginPage() {
       return;
     }
 
+    if (!turnstileToken) {
+      setFormError("Conclua a verificação de segurança para entrar.");
+      return;
+    }
+
     try {
       setLoading(true);
       setFormError("");
-      await login(email.trim(), password);
+      await login(email.trim(), password, turnstileToken);
       router.replace("/dashboard");
     } catch (error) {
       const message = getApiErrorMessage(
@@ -62,6 +79,8 @@ export default function LoginPage() {
         "Não foi possível validar suas credenciais.",
       );
       setFormError(message);
+      setTurnstileToken("");
+      setTurnstileResetKey((value) => value + 1);
     } finally {
       setLoading(false);
     }
@@ -245,6 +264,27 @@ export default function LoginPage() {
                     aria-live="polite"
                   >
                     {passwordError || "A senha de acesso deve ter pelo menos 8 caracteres."}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-sm font-semibold text-slate-200">
+                    Verificação de segurança
+                  </p>
+                  {turnstileSiteKey ? (
+                    <TurnstileWidget
+                      siteKey={turnstileSiteKey}
+                      resetKey={turnstileResetKey}
+                      onTokenChange={setTurnstileToken}
+                      onError={handleTurnstileError}
+                    />
+                  ) : (
+                    <div className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+                      A verificação de segurança não está configurada.
+                    </div>
+                  )}
+                  <p className="mt-2 text-xs text-slate-500">
+                    Esta etapa protege o acesso contra tentativas automatizadas.
                   </p>
                 </div>
               </div>
