@@ -3,7 +3,7 @@ import React from "react";
 import { create } from "zustand";
 import api from "../app/api-client";
 import { toast } from "sonner";
-import { ApiEnvelope, getApiErrorMessage } from "./api-types";
+import { ApiEnvelope } from "./api-types";
 
 type User = {
   id: string;
@@ -60,7 +60,7 @@ export async function login(email: string, password: string, turnstileToken: str
       .setSession(resp.data.data.user, resp.data.data.accessToken, csrf || "");
     toast.success("Bem-vindo(a) de volta!");
   } catch (error) {
-    toast.error(getApiErrorMessage(error, "Credenciais inválidas"));
+    // A tela de login apresenta o erro próximo aos campos enviados.
     throw error;
   }
 }
