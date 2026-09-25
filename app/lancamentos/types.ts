@@ -32,6 +32,18 @@ export interface Director {
   name: string;
 }
 
+export type PaginationMeta = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+export type PaginatedTransactions = {
+  items: Transaction[];
+  pagination: PaginationMeta;
+};
+
 export type TransactionFilters = { gameId: string; categoryId: string };
 
 export type TransactionFormData = {

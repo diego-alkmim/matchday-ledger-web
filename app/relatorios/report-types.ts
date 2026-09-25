@@ -30,6 +30,18 @@ export type AnalyticalGame = {
   transactions: AnalyticalTransaction[];
 };
 
+export type ReportPagination = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+export type PaginatedAnalyticalResponse = {
+  items: AnalyticalGame[];
+  pagination: ReportPagination;
+};
+
 export type AggregatedAnalyticalItem = {
   key: string;
   type: "ENTRADA" | "SAIDA";

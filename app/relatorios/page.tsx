@@ -8,9 +8,10 @@ import { ConsolidatedDirectorReport } from "../../components/reports/consolidate
 import { ReportControls } from "../../components/reports/report-controls";
 import api from "../api-client";
 import { ApiEnvelope, getApiErrorMessage } from "../../lib/api-types";
-import type { AnalyticalGame, ConsolidatedResponse, GameOption, ReportFilters, ReportType } from "./report-types";
+import type { AnalyticalGame, ConsolidatedResponse, GameOption, PaginatedAnalyticalResponse, ReportFilters, ReportPagination, ReportType } from "./report-types";
 
 const initialFilters: ReportFilters = { from: "", to: "", gameId: "", expectedPerGame: "70" };
+const initialAnalyticalPagination: ReportPagination = { page: 1, pageSize: 20, total: 0, totalPages: 0 };
 
 export default function RelatoriosPage() {
   const [games, setGames] = useState<GameOption[]>([]);
@@ -19,6 +20,7 @@ export default function RelatoriosPage() {
   const [reportLoaded, setReportLoaded] = useState<Record<ReportType, boolean>>({ analytical: false, consolidated: false });
   const [loading, setLoading] = useState(false);
   const [analytical, setAnalytical] = useState<AnalyticalGame[]>([]);
+  const [analyticalPagination, setAnalyticalPagination] = useState<ReportPagination>(initialAnalyticalPagination);
   const [consolidated, setConsolidated] = useState<ConsolidatedResponse | null>(null);
   const [filters, setFilters] = useState(initialFilters);
 
@@ -46,7 +48,7 @@ export default function RelatoriosPage() {
     return params.toString();
   };
 
-  const loadSelectedReport = async () => {
+  const loadSelectedReport = async (page = 1) => {
     if (!selectedReport) {
       toast.error("Selecione um relatório antes de aplicar os filtros");
       return;
@@ -55,8 +57,23 @@ export default function RelatoriosPage() {
       setLoading(true);
       if (selectedReport === "analytical") {
         const query = buildQuery(true);
-        const response = await api.get<ApiEnvelope<AnalyticalGame[]>>(`/reports/analytical-by-game${query ? `?${query}` : ""}`);
-        setAnalytical(response.data.data || []);
+        const params = new URLSearchParams(query);
+        params.set("page", String(page));
+        params.set("pageSize", "20");
+        const response = await api.get<ApiEnvelope<PaginatedAnalyticalResponse | AnalyticalGame[]>>(`/reports/analytical-by-game?${params.toString()}`);
+        const data = response.data.data;
+        if (Array.isArray(data)) {
+          setAnalytical(data);
+          setAnalyticalPagination({
+            page: 1,
+            pageSize: data.length,
+            total: data.length,
+            totalPages: 1,
+          });
+        } else {
+          setAnalytical(data?.items || []);
+          setAnalyticalPagination(data?.pagination || initialAnalyticalPagination);
+        }
         setReportLoaded((current) => ({ ...current, analytical: true }));
         return;
       }
@@ -81,6 +98,13 @@ export default function RelatoriosPage() {
         {showConsolidated && reportLoaded.consolidated && consolidated && <ConsolidatedDirectorReport data={consolidated} />}
         {showConsolidated && !reportLoaded.consolidated && !loading && <EmptyState>Selecione os filtros e clique em aplicar para carregar o consolidado.</EmptyState>}
         {showAnalytical && reportLoaded.analytical && <AnalyticalGameReport data={analytical} />}
+        {showAnalytical && reportLoaded.analytical && analyticalPagination.totalPages > 1 && (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-900/70 p-4 text-sm">
+            <button type="button" onClick={() => void loadSelectedReport(analyticalPagination.page - 1)} disabled={loading || analyticalPagination.page === 1} className="rounded-lg border border-white/10 px-3 py-2 font-semibold text-slate-200 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40">Anterior</button>
+            <span className="text-slate-400">P&aacute;gina {analyticalPagination.page} de {analyticalPagination.totalPages}</span>
+            <button type="button" onClick={() => void loadSelectedReport(analyticalPagination.page + 1)} disabled={loading || analyticalPagination.page === analyticalPagination.totalPages} className="rounded-lg border border-white/10 px-3 py-2 font-semibold text-slate-200 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40">Pr&oacute;xima</button>
+          </div>
+        )}
         {showAnalytical && !reportLoaded.analytical && !loading && <EmptyState>Selecione os filtros e clique em aplicar para carregar o analítico.</EmptyState>}
       </div>
     </ProtectedPage>

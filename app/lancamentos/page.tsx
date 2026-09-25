@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, CalendarDays, PencilLine, Plus, Receipt, WalletCards } from "lucide-react";
@@ -9,11 +9,12 @@ import { TransactionList } from "../../components/transactions/transaction-list"
 import { useAuth } from "../../lib/auth";
 import api from "../api-client";
 import { ApiEnvelope, getApiErrorMessage } from "../../lib/api-types";
-import type { Category, Director, Game, Transaction, TransactionFilters, TransactionFormData } from "./types";
+import type { Category, Director, Game, PaginatedTransactions, PaginationMeta, Transaction, TransactionFilters, TransactionFormData } from "./types";
 
 const initialForm: TransactionFormData = {
   amountDisplay: "", amount: 0, categoryId: "", gameId: "", paymentMethod: "PIX", date: "", notes: "", directorId: "",
 };
+const initialPagination: PaginationMeta = { page: 1, pageSize: 20, total: 0, totalPages: 0 };
 
 const formatCurrency = (value: string) => {
   const numeric = Number(value.replace(/[^0-9]/g, "")) / 100;
@@ -31,34 +32,66 @@ export default function LancamentosPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [filters, setFilters] = useState<TransactionFilters>({ gameId: "", categoryId: "" });
+  const [pagination, setPagination] = useState<PaginationMeta>(initialPagination);
+  const [page, setPage] = useState(1);
+  const [reloadKey, setReloadKey] = useState(0);
   const [form, setForm] = useState<TransactionFormData>(initialForm);
 
-  const load = async () => {
-    try {
-      const [txRes, catRes, gameRes, directorRes] = await Promise.all([
-        api.get<ApiEnvelope<Transaction[]>>("/transactions"),
-        api.get<ApiEnvelope<Category[]>>("/categories"),
-        api.get<ApiEnvelope<Game[]>>("/games"),
-        api.get<ApiEnvelope<Director[]>>("/directors"),
-      ]);
-      const transactions = (txRes.data.data || []).slice().sort((a: Transaction, b: Transaction) => {
-        const firstDate = a.createdAt ? new Date(a.createdAt) : new Date(a.date);
-        const secondDate = b.createdAt ? new Date(b.createdAt) : new Date(b.date);
-        return secondDate.getTime() - firstDate.getTime();
-      });
-      setItems(transactions);
-      setCategories(catRes.data.data || []);
-      setGames(gameRes.data.data || []);
-      setDirectors(directorRes.data.data || []);
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, "Erro ao carregar lançamentos"));
-    }
+  useEffect(() => {
+    const loadSupportData = async () => {
+      try {
+        const [catRes, gameRes, directorRes] = await Promise.all([
+          api.get<ApiEnvelope<Category[]>>("/categories"),
+          api.get<ApiEnvelope<Game[]>>("/games"),
+          api.get<ApiEnvelope<Director[]>>("/directors"),
+        ]);
+        setCategories(catRes.data.data || []);
+        setGames(gameRes.data.data || []);
+        setDirectors(directorRes.data.data || []);
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, "Erro ao carregar lan\u00e7amentos"));
+      }
+    };
+
+    void loadSupportData();
+  }, []);
+
+  useEffect(() => {
+    const loadTransactions = async () => {
+      const params = new URLSearchParams({ page: String(page), pageSize: "20" });
+      if (filters.gameId) params.set("gameId", filters.gameId);
+      if (filters.categoryId) params.set("categoryId", filters.categoryId);
+
+      try {
+        const response = await api.get<ApiEnvelope<PaginatedTransactions | Transaction[]>>(
+          `/transactions?${params.toString()}`,
+        );
+        const data = response.data.data;
+        if (Array.isArray(data)) {
+          setItems(data);
+          setPagination({
+            page: 1,
+            pageSize: data.length,
+            total: data.length,
+            totalPages: 1,
+          });
+        } else {
+          setItems(data?.items || []);
+          setPagination(data?.pagination || initialPagination);
+        }
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, "Erro ao carregar lan\u00e7amentos"));
+      }
+    };
+
+    void loadTransactions();
+  }, [filters.categoryId, filters.gameId, page, reloadKey]);
+
+  const reloadTransactions = () => {
+    setPage(1);
+    setReloadKey((value) => value + 1);
   };
-
-  useEffect(() => { void load(); }, []);
-
   const selectedCategory = useMemo(() => categories.find((category) => category.id === form.categoryId), [categories, form.categoryId]);
-  const filteredItems = useMemo(() => items.filter((item) => (!filters.gameId || item.game?.id === filters.gameId) && (!filters.categoryId || item.category?.id === filters.categoryId)), [items, filters]);
   const openGames = useMemo(() => games.filter((game) => game.status === "ABERTO"), [games]);
   const selectedType = selectedCategory?.type;
 
@@ -85,7 +118,7 @@ export default function LancamentosPage() {
         toast.success("Lançado");
       }
       resetForm();
-      await load();
+      reloadTransactions();
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Erro"));
     }
@@ -112,7 +145,7 @@ export default function LancamentosPage() {
       await api.delete(`/transactions/${id}`);
       toast.success("Lançamento removido");
       if (editingId === id) resetForm();
-      await load();
+      reloadTransactions();
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Erro ao remover"));
     } finally {
@@ -212,7 +245,7 @@ export default function LancamentosPage() {
             </div>
           </section>
         )}
-        <TransactionList items={filteredItems} categories={categories} games={games} filters={filters} isAdmin={isAdmin} onFiltersChange={setFilters} onEdit={onEdit} onDeleteRequest={setPendingDeleteId} />
+        <TransactionList items={items} categories={categories} games={games} filters={filters} pagination={pagination} isAdmin={isAdmin} onFiltersChange={(nextFilters) => { setFilters(nextFilters); setPage(1); }} onPageChange={setPage} onEdit={onEdit} onDeleteRequest={setPendingDeleteId} />
       </div>
       {isAdmin && pendingDeleteId && <TransactionDeleteDialog onCancel={() => setPendingDeleteId(null)} onConfirm={() => void onDelete(pendingDeleteId)} />}
     </ProtectedPage>

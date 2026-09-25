@@ -47,22 +47,17 @@ export const getAccessToken = () => store.getState().accessToken;
 export const getCsrfToken = () => store.getState().csrfToken;
 
 export async function login(email: string, password: string, turnstileToken: string) {
-  try {
-    const resp = await api.post<ApiEnvelope<AuthSession>>("/auth/login", {
-      email,
-      password,
-      turnstileToken,
-    });
-    const csrf = resp.data.data.csrfToken;
-    if (csrf) sessionStorage.setItem("csrf_token", csrf);
-    store
-      .getState()
-      .setSession(resp.data.data.user, resp.data.data.accessToken, csrf || "");
-    toast.success("Bem-vindo(a) de volta!");
-  } catch (error) {
-    // A tela de login apresenta o erro próximo aos campos enviados.
-    throw error;
-  }
+  const resp = await api.post<ApiEnvelope<AuthSession>>("/auth/login", {
+    email,
+    password,
+    turnstileToken,
+  });
+  const csrf = resp.data.data.csrfToken;
+  if (csrf) sessionStorage.setItem("csrf_token", csrf);
+  store
+    .getState()
+    .setSession(resp.data.data.user, resp.data.data.accessToken, csrf || "");
+  toast.success("Bem-vindo(a) de volta!");
 }
 
 export async function refreshSession() {
