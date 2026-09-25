@@ -9,6 +9,7 @@ import {
 import type {
   Category,
   Game,
+  PaginationMeta,
   Transaction,
   TransactionFilters,
 } from "../../app/lancamentos/types";
@@ -18,8 +19,10 @@ type TransactionListProps = {
   categories: Category[];
   games: Game[];
   filters: TransactionFilters;
+  pagination: PaginationMeta;
   isAdmin: boolean;
   onFiltersChange: (filters: TransactionFilters) => void;
+  onPageChange: (page: number) => void;
   onEdit: (transaction: Transaction) => void;
   onDeleteRequest: (id: string) => void;
 };
@@ -32,8 +35,10 @@ export function TransactionList({
   categories,
   games,
   filters,
+  pagination,
   isAdmin,
   onFiltersChange,
+  onPageChange,
   onEdit,
   onDeleteRequest,
 }: TransactionListProps) {
@@ -49,8 +54,8 @@ export function TransactionList({
           <div>
             <h2 className="font-bold text-white">Histórico de lançamentos</h2>
             <p className="mt-0.5 text-sm text-slate-400">
-              {items.length} movimentaç{items.length === 1 ? "ão" : "ões"}{" "}
-              encontrada{items.length === 1 ? "" : "s"}.
+              {pagination.total} movimentaç{pagination.total === 1 ? "ão" : "ões"}{" "}
+              encontrada{pagination.total === 1 ? "" : "s"}.
             </p>
           </div>
         </div>
@@ -119,6 +124,29 @@ export function TransactionList({
             <EmptyTransactions hasActiveFilters={hasActiveFilters} />
           )}
         </div>
+        {pagination.totalPages > 1 && (
+          <div className="mt-5 flex items-center justify-between gap-3 border-t border-white/10 pt-4 text-sm">
+            <button
+              type="button"
+              onClick={() => onPageChange(pagination.page - 1)}
+              disabled={pagination.page === 1}
+              className="rounded-lg border border-white/10 px-3 py-2 font-semibold text-slate-200 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            <span className="text-slate-400">
+              P&aacute;gina {pagination.page} de {pagination.totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => onPageChange(pagination.page + 1)}
+              disabled={pagination.page === pagination.totalPages}
+              className="rounded-lg border border-white/10 px-3 py-2 font-semibold text-slate-200 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Pr&oacute;xima
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
