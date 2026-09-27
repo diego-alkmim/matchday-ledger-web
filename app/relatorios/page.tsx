@@ -10,7 +10,7 @@ import api from "../api-client";
 import { ApiEnvelope, getApiErrorMessage } from "../../lib/api-types";
 import type { AnalyticalGame, ConsolidatedResponse, GameOption, PaginatedAnalyticalResponse, ReportFilters, ReportPagination, ReportType } from "./report-types";
 
-const initialFilters: ReportFilters = { from: "", to: "", gameId: "", expectedPerGame: "70" };
+const initialFilters: ReportFilters = { from: "", to: "", gameId: "" };
 const initialAnalyticalPagination: ReportPagination = { page: 1, pageSize: 20, total: 0, totalPages: 0 };
 
 export default function RelatoriosPage() {
@@ -44,7 +44,6 @@ export default function RelatoriosPage() {
     if (filters.from) params.set("from", filters.from);
     if (filters.to) params.set("to", filters.to);
     if (includeGame && filters.gameId) params.set("gameId", filters.gameId);
-    if (!includeGame) params.set("expectedPerGame", String(Number(filters.expectedPerGame || "70") || 70));
     return params.toString();
   };
 

@@ -55,11 +55,22 @@ export type AggregatedAnalyticalItem = {
   directors: string[];
 };
 
-type DirectorGameStatus = {
-  game: { id: string; date: string; opponent?: string | null; location?: string | null };
+type ContributionObligation = {
+  id: string;
+  type: "GAME" | "MONTH";
+  date: string;
+  label: string;
+  gameId?: string | null;
+  opponent?: string | null;
+  location?: string | null;
+  expectedAmount: number;
+};
+
+type DirectorObligationStatus = {
+  obligation: ContributionObligation;
   expectedAmount: number;
   paidAmount: number;
-  appliedOwnGameAmount: number;
+  appliedOwnObligationAmount: number;
   appliedFromFutureExcess: number;
   appliedTotal: number;
   missingAmount: number;
@@ -70,21 +81,27 @@ type DirectorGameStatus = {
 export type ConsolidatedDirector = {
   director: { id: string; name: string; contact?: string | null };
   totals: {
-    gamesCount: number;
-    paidGamesCount: number;
-    expectedPerGame: number;
+    obligationsCount: number;
+    settledObligationsCount: number;
     expectedTotal: number;
     totalPaid: number;
     delta: number;
   };
   status: "EM_DIA" | "ACIMA" | "PENDENTE";
-  gameStatuses: DirectorGameStatus[];
-  missingGames: DirectorGameStatus[];
+  obligationStatuses: DirectorObligationStatus[];
+  missingObligations: DirectorObligationStatus[];
 };
 
 export type ConsolidatedResponse = {
-  summary: { gamesCount: number; expectedPerGame: number; expectedTotalPerDirector: number };
+  summary: {
+    mode: "PER_GAME" | "MONTHLY";
+    gamesCount: number;
+    obligationsCount: number;
+    monthlyContributionPerDirector?: number | null;
+    expectedTotalPerDirector: number;
+  };
   games: GameOption[];
+  obligations: ContributionObligation[];
   directors: ConsolidatedDirector[];
 };
 
@@ -94,5 +111,4 @@ export type ReportFilters = {
   from: string;
   to: string;
   gameId: string;
-  expectedPerGame: string;
 };
