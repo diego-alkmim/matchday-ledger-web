@@ -48,20 +48,23 @@ export function ProtectedPage({ children }: { children: React.ReactNode }) {
     setSwitchingTeam(true);
     try {
       await switchTeam(teamId);
-      window.location.assign("/dashboard");
+      if (window.location.pathname === "/dashboard") {
+        window.location.reload();
+      } else {
+        window.location.replace("/dashboard");
+      }
     } catch {
       toast.error("Não foi possível trocar de time. Tente novamente.");
-    } finally {
       setSwitchingTeam(false);
     }
   };
 
-  if (!hydrated || isChecking) {
+  if (!hydrated || isChecking || switchingTeam) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#020817] text-emerald-200">
         <div className="flex items-center gap-3 text-sm font-semibold tracking-[0.18em]">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-300/30 border-t-emerald-300" />
-          CARREGANDO O MATCHDAY
+          {switchingTeam ? "TROCANDO DE TIME" : "CARREGANDO O MATCHDAY"}
         </div>
       </div>
     );
