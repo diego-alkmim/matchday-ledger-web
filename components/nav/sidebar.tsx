@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   BarChart3,
+  Building2,
   CalendarDays,
   LayoutDashboard,
   LogOut,
@@ -16,7 +17,8 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import { logout } from "../../lib/auth";
+import { logout, switchTeam } from "../../lib/auth";
+import { toast } from "sonner";
 
 export function ProtectedPage({ children }: { children: React.ReactNode }) {
   const { user, hydrated } = useAuth();
@@ -24,6 +26,7 @@ export function ProtectedPage({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
   const [open, setOpen] = useState(false);
+  const [switchingTeam, setSwitchingTeam] = useState(false);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -38,6 +41,19 @@ export function ProtectedPage({ children }: { children: React.ReactNode }) {
     await logout();
     router.replace("/login");
     setOpen(false);
+  };
+
+  const handleTeamChange = async (teamId: string) => {
+    if (!teamId || teamId === user?.team?.id) return;
+    setSwitchingTeam(true);
+    try {
+      await switchTeam(teamId);
+      window.location.assign("/dashboard");
+    } catch {
+      toast.error("Não foi possível trocar de time. Tente novamente.");
+    } finally {
+      setSwitchingTeam(false);
+    }
   };
 
   if (!hydrated || isChecking) {
@@ -79,6 +95,30 @@ export function ProtectedPage({ children }: { children: React.ReactNode }) {
           >
             <X size={18} />
           </button>
+        </div>
+
+        <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.035] p-3">
+          <div className="mb-2 flex items-center gap-2 text-[0.67rem] font-bold uppercase tracking-[0.18em] text-slate-500">
+            <Building2 size={14} aria-hidden="true" /> Time ativo
+          </div>
+          {user && user.teams?.length > 1 ? (
+            <select
+              value={user.team?.id || ""}
+              onChange={(event) => void handleTeamChange(event.target.value)}
+              disabled={switchingTeam}
+              aria-label="Trocar time ativo"
+              className="w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-emerald-300 disabled:opacity-60"
+            >
+              {user.teams.map((team) => (
+                <option key={team.id} value={team.id}>{team.name}</option>
+              ))}
+            </select>
+          ) : (
+            <p className="truncate text-sm font-semibold text-slate-200">
+              {user?.team?.name || "Time atual"}
+            </p>
+          )}
+          {switchingTeam && <p className="mt-2 text-xs text-emerald-300">Trocando time...</p>}
         </div>
 
         <p className="mb-3 px-3 text-[0.67rem] font-bold uppercase tracking-[0.2em] text-slate-500">Central do time</p>

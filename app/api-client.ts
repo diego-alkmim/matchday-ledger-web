@@ -19,7 +19,12 @@ api.interceptors.request.use((config) => {
 });
 
 const isAuthRoute = (url?: string) =>
-  Boolean(url && ["/auth/login", "/auth/refresh", "/auth/logout"].some((route) => url.includes(route)));
+  Boolean(
+    url &&
+      ["/auth/login", "/auth/refresh", "/auth/logout", "/auth/select-team"].some((route) =>
+        url.includes(route),
+      ),
+  );
 
 let refreshing = false;
 api.interceptors.response.use(

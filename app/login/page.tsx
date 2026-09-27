@@ -1,14 +1,6 @@
 ﻿"use client";
 
-import {
-  FormEvent,
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
@@ -20,13 +12,14 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { login, useAuth } from "../../lib/auth";
+import { login, TeamSelection, useAuth } from "../../lib/auth";
 import { getApiErrorMessage } from "../../lib/api-types";
 import {
   TurnstileWidget,
   TurnstileWidgetHandle,
 } from "../../components/auth/turnstile-widget";
 import { LoginPitch } from "../../components/auth/login-pitch";
+import { TeamSelectionForm } from "../../components/auth/team-selection-form";
 
 const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA";
 
@@ -40,6 +33,7 @@ export default function LoginPage() {
   const [turnstileRequested, setTurnstileRequested] = useState(false);
   const [turnstileExecutionKey, setTurnstileExecutionKey] = useState(0);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const [teamSelection, setTeamSelection] = useState<TeamSelection | null>(null);
   const turnstileRef = useRef<TurnstileWidgetHandle>(null);
   const emailId = useId();
   const passwordId = useId();
@@ -86,7 +80,11 @@ export default function LoginPage() {
 
   const completeLogin = useCallback(async (turnstileToken: string) => {
     try {
-      await login(email.trim(), password, turnstileToken);
+      const selection = await login(email.trim(), password, turnstileToken);
+      if (selection) {
+        setTeamSelection(selection);
+        return;
+      }
       router.replace("/dashboard");
     } catch (error) {
       const message = getApiErrorMessage(
@@ -157,6 +155,12 @@ export default function LoginPage() {
               </p>
             </div>
 
+            {teamSelection ? (
+              <TeamSelectionForm
+                selection={teamSelection}
+                onSuccess={() => router.replace("/dashboard")}
+              />
+            ) : (
             <form
               onSubmit={(event) => void submit(event)}
               className="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-7"
@@ -324,6 +328,7 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
+            )}
 
             <p className="mt-6 flex items-center gap-2 text-sm text-slate-500">
               <ShieldCheck
