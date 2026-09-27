@@ -4,6 +4,10 @@
 body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
 
 /* react-datepicker dark theme */
+.react-datepicker-popper {
+  z-index: 60 !important;
+}
+
 .react-datepicker {
   background-color: #0f172a !important;
   color: #e2e8f0 !important;

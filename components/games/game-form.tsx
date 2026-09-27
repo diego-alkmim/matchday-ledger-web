@@ -34,7 +34,7 @@ export function GameForm({
   onCancel,
 }: Props) {
   return (
-    <Surface>
+    <Surface className="relative z-10">
       <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-300/10 text-sky-300">
           {editingId ? <PencilLine size={19} /> : <Plus size={19} />}
