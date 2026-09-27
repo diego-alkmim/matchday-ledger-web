@@ -1,33 +1,197 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarDays, Clock3, MapPin, PencilLine, Plus, ShieldCheck, Trash2 } from "lucide-react";
-import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { toast } from "sonner";
+import { ContributionSettingsCard } from "../../components/games/contribution-settings-card";
+import { GameForm } from "../../components/games/game-form";
+import { GameList } from "../../components/games/game-list";
 import { ProtectedPage } from "../../components/nav/sidebar";
-import { EmptyState, fieldClassName, FormField, PageHeader, Surface } from "../../components/ui/page-primitives";
+import { PageHeader } from "../../components/ui/page-primitives";
+import { ApiEnvelope, getApiErrorMessage } from "../../lib/api-types";
 import { useAuth } from "../../lib/auth";
 import api from "../api-client";
-import { ApiEnvelope, getApiErrorMessage } from "../../lib/api-types";
-
-interface Game { id: string; date: string; location?: string | null; opponent?: string | null; status: "ABERTO" | "FECHADO"; }
-const datePickerClasses = { calendar: "!bg-slate-900 !text-slate-100 !border !border-slate-700", popper: "react-datepicker-popper", day: "hover:!bg-emerald-500/30 rounded text-slate-100" };
-const initialForm = { location: "", opponent: "", status: "ABERTO" as Game["status"] };
+import {
+  ContributionSettings,
+  Game,
+  initialGameForm,
+} from "./types";
 
 export default function JogosPage() {
-  const { user } = useAuth(); const isAdmin = user?.role === "ADMIN";
-  const [games, setGames] = useState<Game[]>([]); const [loading, setLoading] = useState(false); const [editingId, setEditingId] = useState<string | null>(null); const [form, setForm] = useState(initialForm); const [selectedDate, setSelectedDate] = useState<Date | null>(null); const [selectedTime, setSelectedTime] = useState<Date | null>(null);
-  const load = async () => { setLoading(true); try { const { data } = await api.get<ApiEnvelope<Game[]>>("/games"); setGames((data.data || []).slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())); } catch (error) { toast.error(getApiErrorMessage(error, "Erro ao carregar jogos")); } finally { setLoading(false); } };
-  useEffect(() => { void load(); }, []);
-  const resetForm = () => { setForm(initialForm); setSelectedDate(null); setSelectedTime(null); setEditingId(null); };
-  const buildIso = (date: Date | null, time: Date | null) => { if (!date) return ""; const result = new Date(date); if (time) result.setHours(time.getHours(), time.getMinutes(), 0, 0); return result.toISOString(); };
-  const submit = async () => { if (!selectedDate) { toast.error("Informe a data do jogo"); return; } try { const payload = { date: buildIso(selectedDate, selectedTime), location: form.location, opponent: form.opponent, status: form.status }; if (editingId) { await api.put(`/games/${editingId}`, payload); toast.success("Jogo atualizado"); } else { await api.post("/games", payload); toast.success("Jogo criado"); } resetForm(); void load(); } catch (error) { toast.error(getApiErrorMessage(error, "Erro ao salvar jogo")); } };
-  const onDelete = async (id: string) => { try { await api.delete(`/games/${id}`); toast.success("Jogo removido"); void load(); } catch (error) { toast.error(getApiErrorMessage(error, "Erro ao remover")); } };
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+  const [games, setGames] = useState<Game[]>([]);
+  const [settings, setSettings] = useState<ContributionSettings | null>(null);
+  const [settingsDraft, setSettingsDraft] = useState<ContributionSettings | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState(initialGameForm);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<Date | null>(null);
 
-  return <ProtectedPage><div className="space-y-6">
-    <PageHeader eyebrow="Cadastros do time" title="Jogos" description="Organize as partidas e controle quando o caixa de cada jogo é encerrado." aside={<span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300">{games.filter((game) => game.status === "ABERTO").length} aberto{games.filter((game) => game.status === "ABERTO").length === 1 ? "" : "s"}</span>} />
-    {isAdmin && <Surface><div className="flex items-center gap-3 border-b border-white/10 px-5 py-5"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-300/10 text-sky-300">{editingId ? <PencilLine size={19} /> : <Plus size={19} />}</span><div><h2 className="font-bold text-white">{editingId ? "Editar jogo" : "Novo jogo"}</h2><p className="mt-0.5 text-sm text-slate-400">Defina os dados da partida e o status financeiro inicial.</p></div></div><div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3"><FormField label="Data"><div className={fieldClassName}><DatePicker selected={selectedDate} onChange={(date: Date | null) => setSelectedDate(date)} dateFormat="dd/MM/yyyy" placeholderText="Selecione a data" className="w-full bg-transparent text-sm text-slate-100 outline-none" calendarClassName={datePickerClasses.calendar} dayClassName={() => datePickerClasses.day} popperClassName={datePickerClasses.popper} /></div></FormField><FormField label="Horário"><div className={fieldClassName}><DatePicker selected={selectedTime} onChange={(date: Date | null) => setSelectedTime(date)} showTimeSelect showTimeSelectOnly timeIntervals={15} timeCaption="Hora" dateFormat="HH:mm" placeholderText="Horário" className="w-full bg-transparent text-sm text-slate-100 outline-none" calendarClassName={datePickerClasses.calendar} timeClassName={() => "text-slate-100"} popperClassName={datePickerClasses.popper} /></div></FormField><FormField label="Adversário"><input className={fieldClassName} placeholder="Nome do adversário" value={form.opponent} onChange={(event) => setForm({ ...form, opponent: event.target.value })} /></FormField><FormField label="Local"><input className={fieldClassName} placeholder="Local da partida" value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} /></FormField><FormField label="Status financeiro"><select className={fieldClassName} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as Game["status"] })}><option value="ABERTO">Aberto para lançamentos</option><option value="FECHADO">Fechado</option></select></FormField></div><div className="flex flex-col gap-3 border-t border-white/10 bg-slate-950/20 px-5 py-4 sm:flex-row"><button onClick={() => void submit()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-300 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-200">{editingId ? <PencilLine size={16} /> : <Plus size={16} />}{editingId ? "Salvar alterações" : "Cadastrar jogo"}</button>{editingId && <button onClick={resetForm} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/5 hover:text-white">Cancelar edição</button>}</div></Surface>}
-    <Surface><div className="flex items-center justify-between border-b border-white/10 px-5 py-5"><div><h2 className="font-bold text-white">Agenda de jogos</h2><p className="mt-0.5 text-sm text-slate-400">Partidas mais recentes aparecem primeiro.</p></div>{loading && <span className="text-xs font-semibold text-emerald-300">Atualizando...</span>}</div><div className="grid gap-3 p-3 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">{games.map((game) => { const open = game.status === "ABERTO"; const date = new Date(game.date); return <article key={game.id} className="group rounded-2xl border border-white/10 bg-slate-950/25 p-4 transition hover:border-sky-300/30"><div className="flex items-start justify-between gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-300/10 text-sky-300"><CalendarDays size={19} /></span><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${open ? "bg-emerald-300/10 text-emerald-200" : "bg-slate-700/70 text-slate-300"}`}>{open ? "Aberto" : "Fechado"}</span></div><h3 className="mt-5 font-bold text-white">{game.opponent || "Adversário não informado"}</h3><div className="mt-2 space-y-1 text-sm text-slate-400"><p className="flex items-center gap-2"><Clock3 size={14} />{date.toLocaleDateString("pt-BR")} às {date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p>{game.location && <p className="flex items-center gap-2"><MapPin size={14} />{game.location}</p>}</div>{isAdmin && <div className="mt-5 flex gap-2 border-t border-white/10 pt-3"><button onClick={() => { setEditingId(game.id); setForm({ location: game.location || "", opponent: game.opponent || "", status: game.status }); setSelectedDate(date); setSelectedTime(date); }} className="inline-flex items-center gap-2 text-sm font-semibold text-sky-200 transition hover:text-sky-100"><PencilLine size={15} />Editar</button><button onClick={() => void onDelete(game.id)} className="inline-flex items-center gap-2 text-sm font-semibold text-rose-200 transition hover:text-rose-100"><Trash2 size={15} />Excluir</button></div>}</article>; })}{!games.length && <div className="sm:col-span-2 xl:col-span-3"><EmptyState icon={<ShieldCheck size={30} />} title="Nenhum jogo cadastrado" description="Cadastre a primeira partida para começar a registrar o caixa do time." /></div>}</div></Surface>
-  </div></ProtectedPage>;
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [gamesResponse, settingsResponse] = await Promise.all([
+        api.get<ApiEnvelope<Game[]>>("/games"),
+        api.get<ApiEnvelope<ContributionSettings>>("/team-settings/contributions"),
+      ]);
+      const loadedGames = (gamesResponse.data.data || []).map((game) => ({
+        ...game,
+        expectedContributionPerDirector: Number(game.expectedContributionPerDirector),
+      }));
+      setGames(
+        loadedGames.sort(
+          (first, second) => new Date(second.date).getTime() - new Date(first.date).getTime(),
+        ),
+      );
+      setSettings(settingsResponse.data.data);
+      setSettingsDraft(settingsResponse.data.data);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao carregar jogos"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const resetForm = () => {
+    setForm(initialGameForm);
+    setSelectedDate(null);
+    setSelectedTime(null);
+    setEditingId(null);
+  };
+
+  const buildIso = (date: Date, time: Date | null) => {
+    const result = new Date(date);
+    if (time) result.setHours(time.getHours(), time.getMinutes(), 0, 0);
+    return result.toISOString();
+  };
+
+  const submit = async () => {
+    if (!selectedDate) return toast.error("Informe a data do jogo");
+    const expectedContributionPerDirector = Number(form.expectedContributionPerDirector);
+    if (!Number.isFinite(expectedContributionPerDirector) || expectedContributionPerDirector <= 0) {
+      return toast.error("Informe um valor esperado por diretor maior que zero");
+    }
+    try {
+      const payload = {
+        date: buildIso(selectedDate, selectedTime),
+        location: form.location,
+        opponent: form.opponent,
+        status: form.status,
+        expectedContributionPerDirector,
+      };
+      if (editingId) {
+        await api.put(`/games/${editingId}`, payload);
+        toast.success("Jogo atualizado");
+      } else {
+        await api.post("/games", payload);
+        toast.success("Jogo criado");
+      }
+      resetForm();
+      void load();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao salvar jogo"));
+    }
+  };
+
+  const saveSettings = async () => {
+    if (!settingsDraft) return;
+    if (
+      settingsDraft.mode === "MONTHLY" &&
+      (!Number.isFinite(settingsDraft.monthlyContributionPerDirector) ||
+        settingsDraft.monthlyContributionPerDirector <= 0)
+    ) {
+      return toast.error("Informe um valor mensal maior que zero");
+    }
+    setSavingSettings(true);
+    try {
+      const response = await api.put<ApiEnvelope<ContributionSettings>>(
+        "/team-settings/contributions",
+        settingsDraft,
+      );
+      setSettings(response.data.data);
+      setSettingsDraft(response.data.data);
+      toast.success("Regra de arrecadação atualizada");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao atualizar a regra de arrecadação"));
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const onDelete = async (id: string) => {
+    try {
+      await api.delete(`/games/${id}`);
+      toast.success("Jogo removido");
+      void load();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao remover"));
+    }
+  };
+
+  const startEditing = (game: Game) => {
+    const date = new Date(game.date);
+    setEditingId(game.id);
+    setForm({
+      location: game.location || "",
+      opponent: game.opponent || "",
+      status: game.status,
+      expectedContributionPerDirector: String(game.expectedContributionPerDirector),
+    });
+    setSelectedDate(date);
+    setSelectedTime(date);
+  };
+
+  return (
+    <ProtectedPage>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Cadastros do time"
+          title="Jogos"
+          description="Organize as partidas e defina a regra de contribuição dos diretores."
+          aside={
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300">
+              {games.filter((game) => game.status === "ABERTO").length} abertos
+            </span>
+          }
+        />
+        {settingsDraft && (
+          <ContributionSettingsCard
+            settings={settingsDraft}
+            isAdmin={isAdmin}
+            saving={savingSettings}
+            onChange={setSettingsDraft}
+            onSave={() => void saveSettings()}
+          />
+        )}
+        {isAdmin && (
+          <GameForm
+            editingId={editingId}
+            form={form}
+            selectedDate={selectedDate}
+            selectedTime={selectedTime}
+            setForm={setForm}
+            setSelectedDate={setSelectedDate}
+            setSelectedTime={setSelectedTime}
+            onSubmit={() => void submit()}
+            onCancel={resetForm}
+          />
+        )}
+        <GameList
+          games={games}
+          settings={settings}
+          loading={loading}
+          isAdmin={isAdmin}
+          onEdit={startEditing}
+          onDelete={(id) => void onDelete(id)}
+        />
+      </div>
+    </ProtectedPage>
+  );
 }
