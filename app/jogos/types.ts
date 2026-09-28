@@ -1,10 +1,3 @@
-export type ContributionMode = "PER_GAME" | "MONTHLY";
-
-export interface ContributionSettings {
-  mode: ContributionMode;
-  monthlyContributionPerDirector: number;
-}
-
 export interface Game {
   id: string;
   date: string;

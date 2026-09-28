@@ -11,6 +11,7 @@ export interface Transaction {
   game?: { id: string; opponent?: string | null; date: string };
   category?: { id: string; name: string; type?: "ENTRADA" | "SAIDA" };
   director?: { id: string; name: string };
+  collectionPayment?: { id: string };
 }
 
 export interface Category {
