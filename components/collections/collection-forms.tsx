@@ -78,8 +78,8 @@ export function PaymentForm({ members, plans, games, onSubmit }: PaymentFormProp
     }
   };
   return <form onSubmit={submit} className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-    <FormField label="Participante"><select required name="memberId" className={fieldClassName}><option value="">Selecione</option>{members.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FormField>
-    <FormField label="Plano"><select required name="planId" value={selectedPlanId} onChange={(event) => setSelectedPlanId(event.target.value)} className={fieldClassName}><option value="">Selecione</option>{plans.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FormField>
+    <FormField label="Participante"><select required name="memberId" className={fieldClassName}><option value="">Selecione</option>{members.map((item) => <option key={item.id} value={item.id}>{item.name}{item.active ? "" : " (inativo — somente pendências)"}</option>)}</select></FormField>
+    <FormField label="Plano"><select required name="planId" value={selectedPlanId} onChange={(event) => setSelectedPlanId(event.target.value)} className={fieldClassName}><option value="">Selecione</option>{plans.map((item) => <option key={item.id} value={item.id}>{item.name}{item.active ? "" : " (encerrado — somente pendências)"}</option>)}</select></FormField>
     {selectedPlan?.frequency === "PER_GAME" && <FormField label="Jogo"><select required name="gameId" className={fieldClassName}><option value="">Selecione</option>{games.filter((item) => item.status === "ABERTO").map((item) => <option key={item.id} value={item.id}>{item.opponent || "Sem adversário"} · {new Date(item.date).toLocaleDateString("pt-BR")}</option>)}</select></FormField>}
     <FormField label="Valor"><input required min="0.01" step="0.01" type="number" name="amount" className={fieldClassName} /></FormField>
     <FormField label="Data"><input required type="date" name="date" className={fieldClassName} /></FormField>
