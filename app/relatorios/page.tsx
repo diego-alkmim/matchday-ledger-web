@@ -23,7 +23,7 @@ const initialAnalyticalPagination: ReportPagination = { page: 1, pageSize: 20, t
 
 export default function RelatoriosPage() {
   const [games, setGames] = useState<GameOption[]>([]);
-  const [gamesLoading, setGamesLoading] = useState(true);
+  const [gamesLoading, setGamesLoading] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ReportType | null>(null);
   const [reportLoaded, setReportLoaded] = useState<Record<ReportType, boolean>>({ analytical: false, consolidated: false });
   const [loading, setLoading] = useState(false);
@@ -33,22 +33,40 @@ export default function RelatoriosPage() {
   const [filters, setFilters] = useState(initialFilters);
 
   useEffect(() => {
-    const loadGames = async () => {
+    if (selectedReport !== "analytical" || !filters.from || !filters.to) {
+      setGamesLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setGamesLoading(true);
+    const timeout = window.setTimeout(async () => {
       try {
-        setGamesLoading(true);
         const params = new URLSearchParams({ compact: "true" });
-        if (filters.from) params.set("activityFrom", filters.from);
-        if (filters.to) params.set("activityTo", filters.to);
-        const response = await api.get<ApiEnvelope<GameOption[]>>(`/games?${params.toString()}`);
-        setGames(response.data.data || []);
+        params.set("activityFrom", filters.from);
+        params.set("activityTo", filters.to);
+        const response = await api.get<ApiEnvelope<GameOption[]>>(`/games?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        const options = response.data.data || [];
+        setGames(options);
+        setFilters((current) => options.some((game) => game.id === current.gameId)
+          ? current
+          : { ...current, gameId: "" });
       } catch (error) {
-        toast.error(getApiErrorMessage(error, "Erro ao carregar jogos"));
+        if (!controller.signal.aborted) {
+          toast.error(getApiErrorMessage(error, "Erro ao carregar jogos"));
+        }
       } finally {
-        setGamesLoading(false);
+        if (!controller.signal.aborted) setGamesLoading(false);
       }
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
     };
-    void loadGames();
-  }, [filters.from, filters.to]);
+  }, [selectedReport, filters.from, filters.to]);
 
   const buildQuery = (includeGame: boolean) => {
     const params = new URLSearchParams();
