@@ -44,11 +44,11 @@ export type Obligation = {
 export type Payment = {
   id: string;
   amount: number;
+  availableAmount: number;
   createdAt: string;
   member: { name: string };
   plan: { name: string };
   transaction: { date: string; paymentMethod: PaymentMethod };
-  allocations: Array<{ amount: number }>;
 };
 
 export type CollectionSummary = {

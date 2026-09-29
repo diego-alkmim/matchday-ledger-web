@@ -10,7 +10,13 @@ import api from "../api-client";
 import { ApiEnvelope, getApiErrorMessage } from "../../lib/api-types";
 import type { AnalyticalGame, ConsolidatedResponse, GameOption, PaginatedAnalyticalResponse, ReportFilters, ReportPagination, ReportType } from "./report-types";
 
-const initialFilters: ReportFilters = { from: "", to: "", gameId: "" };
+const now = new Date();
+const currentYear = now.getFullYear();
+const initialFilters: ReportFilters = {
+  from: `${currentYear}-01-01`,
+  to: `${currentYear}-12-31`,
+  gameId: "",
+};
 const initialAnalyticalPagination: ReportPagination = { page: 1, pageSize: 20, total: 0, totalPages: 0 };
 
 export default function RelatoriosPage() {
@@ -28,7 +34,10 @@ export default function RelatoriosPage() {
     const loadGames = async () => {
       try {
         setGamesLoading(true);
-        const response = await api.get<ApiEnvelope<GameOption[]>>("/games");
+        const params = new URLSearchParams({ compact: "true" });
+        if (filters.from) params.set("from", filters.from);
+        if (filters.to) params.set("to", filters.to);
+        const response = await api.get<ApiEnvelope<GameOption[]>>(`/games?${params.toString()}`);
         setGames(response.data.data || []);
       } catch (error) {
         toast.error(getApiErrorMessage(error, "Erro ao carregar jogos"));
@@ -37,7 +46,7 @@ export default function RelatoriosPage() {
       }
     };
     void loadGames();
-  }, []);
+  }, [filters.from, filters.to]);
 
   const buildQuery = (includeGame: boolean) => {
     const params = new URLSearchParams();
@@ -50,6 +59,10 @@ export default function RelatoriosPage() {
   const loadSelectedReport = async (page = 1) => {
     if (!selectedReport) {
       toast.error("Selecione um relatório antes de aplicar os filtros");
+      return;
+    }
+    if (!filters.from || !filters.to) {
+      toast.error("Informe as datas inicial e final do período");
       return;
     }
     try {
