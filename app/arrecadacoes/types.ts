@@ -32,6 +32,13 @@ export type Obligation = {
   member: { id: string; name: string };
   plan: { id: string; name: string };
   game?: { opponent?: string; date: string };
+  adjustments: Array<{
+    id: string;
+    type: "DISCOUNT" | "SURCHARGE" | "WAIVER" | "CANCELLATION";
+    amount: number;
+    reason: string;
+    createdAt: string;
+  }>;
 };
 
 export type Payment = {
