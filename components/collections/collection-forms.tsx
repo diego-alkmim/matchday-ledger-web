@@ -1,6 +1,6 @@
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 import { FormField, fieldClassName } from "../ui/page-primitives";
-import type { Category, Member, Plan } from "../../app/arrecadacoes/types";
+import type { Category, Game, Member, Plan } from "../../app/arrecadacoes/types";
 
 type MemberFormProps = { onSubmit: (data: Record<string, unknown>) => Promise<void> };
 export function MemberForm({ onSubmit }: MemberFormProps) {
@@ -50,17 +50,20 @@ export function PlanForm({ categories, onSubmit }: PlanFormProps) {
   </form>;
 }
 
-type PaymentFormProps = { members: Member[]; plans: Plan[]; onSubmit: (data: Record<string, unknown>) => Promise<void> };
-export function PaymentForm({ members, plans, onSubmit }: PaymentFormProps) {
+type PaymentFormProps = { members: Member[]; plans: Plan[]; games: Game[]; onSubmit: (data: Record<string, unknown>) => Promise<void> };
+export function PaymentForm({ members, plans, games, onSubmit }: PaymentFormProps) {
+  const [selectedPlanId, setSelectedPlanId] = useState("");
+  const selectedPlan = plans.find((plan) => plan.id === selectedPlanId);
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
     const values = new FormData(form);
-    void onSubmit({ memberId: values.get("memberId"), planId: values.get("planId"), amount: Number(values.get("amount")), date: values.get("date"), paymentMethod: values.get("paymentMethod"), notes: values.get("notes") }).then(() => form.reset()).catch(() => undefined);
+    void onSubmit({ memberId: values.get("memberId"), planId: values.get("planId"), gameId: values.get("gameId") || undefined, amount: Number(values.get("amount")), date: values.get("date"), paymentMethod: values.get("paymentMethod"), notes: values.get("notes") }).then(() => { form.reset(); setSelectedPlanId(""); }).catch(() => undefined);
   };
   return <form onSubmit={submit} className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
     <FormField label="Participante"><select required name="memberId" className={fieldClassName}><option value="">Selecione</option>{members.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FormField>
-    <FormField label="Plano"><select required name="planId" className={fieldClassName}><option value="">Selecione</option>{plans.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FormField>
+    <FormField label="Plano"><select required name="planId" value={selectedPlanId} onChange={(event) => setSelectedPlanId(event.target.value)} className={fieldClassName}><option value="">Selecione</option>{plans.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FormField>
+    {selectedPlan?.frequency === "PER_GAME" && <FormField label="Jogo"><select required name="gameId" className={fieldClassName}><option value="">Selecione</option>{games.filter((item) => item.status === "ABERTO").map((item) => <option key={item.id} value={item.id}>{item.opponent || "Sem adversário"} · {new Date(item.date).toLocaleDateString("pt-BR")}</option>)}</select></FormField>}
     <FormField label="Valor"><input required min="0.01" step="0.01" type="number" name="amount" className={fieldClassName} /></FormField>
     <FormField label="Data"><input required type="date" name="date" className={fieldClassName} /></FormField>
     <FormField label="Forma"><select name="paymentMethod" className={fieldClassName}><option>PIX</option><option>DINHEIRO</option><option>CARTAO</option></select></FormField>
