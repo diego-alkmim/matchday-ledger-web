@@ -12,9 +12,11 @@ import type { AnalyticalGame, ConsolidatedResponse, GameOption, PaginatedAnalyti
 
 const now = new Date();
 const currentYear = now.getFullYear();
+const currentMonth = String(now.getMonth() + 1).padStart(2, "0");
+const currentDay = String(now.getDate()).padStart(2, "0");
 const initialFilters: ReportFilters = {
   from: `${currentYear}-01-01`,
-  to: `${currentYear}-12-31`,
+  to: `${currentYear}-${currentMonth}-${currentDay}`,
   gameId: "",
 };
 const initialAnalyticalPagination: ReportPagination = { page: 1, pageSize: 20, total: 0, totalPages: 0 };
@@ -35,8 +37,8 @@ export default function RelatoriosPage() {
       try {
         setGamesLoading(true);
         const params = new URLSearchParams({ compact: "true" });
-        if (filters.from) params.set("from", filters.from);
-        if (filters.to) params.set("to", filters.to);
+        if (filters.from) params.set("activityFrom", filters.from);
+        if (filters.to) params.set("activityTo", filters.to);
         const response = await api.get<ApiEnvelope<GameOption[]>>(`/games?${params.toString()}`);
         setGames(response.data.data || []);
       } catch (error) {
