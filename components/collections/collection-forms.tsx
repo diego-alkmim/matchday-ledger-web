@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { FormField, fieldClassName } from "../ui/page-primitives";
 import type { Category, Game, Member, Plan } from "../../app/arrecadacoes/types";
 
@@ -53,12 +53,29 @@ export function PlanForm({ categories, onSubmit }: PlanFormProps) {
 type PaymentFormProps = { members: Member[]; plans: Plan[]; games: Game[]; onSubmit: (data: Record<string, unknown>) => Promise<void> };
 export function PaymentForm({ members, plans, games, onSubmit }: PaymentFormProps) {
   const [selectedPlanId, setSelectedPlanId] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const idempotencyKeyRef = useRef<string | null>(null);
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId);
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submittingRef.current) return;
     const form = event.currentTarget;
     const values = new FormData(form);
-    void onSubmit({ memberId: values.get("memberId"), planId: values.get("planId"), gameId: values.get("gameId") || undefined, amount: Number(values.get("amount")), date: values.get("date"), paymentMethod: values.get("paymentMethod"), notes: values.get("notes") }).then(() => { form.reset(); setSelectedPlanId(""); }).catch(() => undefined);
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    idempotencyKeyRef.current ??= crypto.randomUUID();
+    try {
+      await onSubmit({ idempotencyKey: idempotencyKeyRef.current, memberId: values.get("memberId"), planId: values.get("planId"), gameId: values.get("gameId") || undefined, amount: Number(values.get("amount")), date: values.get("date"), paymentMethod: values.get("paymentMethod"), notes: values.get("notes") });
+      form.reset();
+      setSelectedPlanId("");
+      idempotencyKeyRef.current = null;
+    } catch {
+      // Keep the key so a retry cannot duplicate a payment committed before a network failure.
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
   return <form onSubmit={submit} className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
     <FormField label="Participante"><select required name="memberId" className={fieldClassName}><option value="">Selecione</option>{members.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FormField>
@@ -68,6 +85,6 @@ export function PaymentForm({ members, plans, games, onSubmit }: PaymentFormProp
     <FormField label="Data"><input required type="date" name="date" className={fieldClassName} /></FormField>
     <FormField label="Forma"><select name="paymentMethod" className={fieldClassName}><option>PIX</option><option>DINHEIRO</option><option>CARTAO</option></select></FormField>
     <FormField label="Observação"><input name="notes" className={fieldClassName} /></FormField>
-    <button className="rounded-xl bg-emerald-300 px-4 py-2.5 font-bold text-slate-950">Registrar pagamento</button>
+    <button disabled={isSubmitting} className="rounded-xl bg-emerald-300 px-4 py-2.5 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? "Registrando..." : "Registrar pagamento"}</button>
   </form>;
 }
