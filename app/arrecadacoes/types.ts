@@ -7,7 +7,7 @@ export type Member = {
   name: string;
   contact?: string;
   active: boolean;
-  roles: Array<{ role: MemberRole; startsAt: string; endsAt?: string }>;
+  roles: Array<{ id: string; role: MemberRole; startsAt: string; endsAt?: string }>;
 };
 
 export type Plan = {
