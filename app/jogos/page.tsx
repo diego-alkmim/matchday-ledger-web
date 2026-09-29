@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import "react-datepicker/dist/react-datepicker.css";
 import { toast } from "sonner";
-import { ContributionSettingsCard } from "../../components/games/contribution-settings-card";
 import { GameForm } from "../../components/games/game-form";
 import { GameList } from "../../components/games/game-list";
 import { ProtectedPage } from "../../components/nav/sidebar";
@@ -11,20 +10,13 @@ import { PageHeader } from "../../components/ui/page-primitives";
 import { ApiEnvelope, getApiErrorMessage } from "../../lib/api-types";
 import { useAuth } from "../../lib/auth";
 import api from "../api-client";
-import {
-  ContributionSettings,
-  Game,
-  initialGameForm,
-} from "./types";
+import { Game, initialGameForm } from "./types";
 
 export default function JogosPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
   const [games, setGames] = useState<Game[]>([]);
-  const [settings, setSettings] = useState<ContributionSettings | null>(null);
-  const [settingsDraft, setSettingsDraft] = useState<ContributionSettings | null>(null);
   const [loading, setLoading] = useState(false);
-  const [savingSettings, setSavingSettings] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(initialGameForm);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -33,10 +25,7 @@ export default function JogosPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [gamesResponse, settingsResponse] = await Promise.all([
-        api.get<ApiEnvelope<Game[]>>("/games"),
-        api.get<ApiEnvelope<ContributionSettings>>("/team-settings/contributions"),
-      ]);
+      const gamesResponse = await api.get<ApiEnvelope<Game[]>>("/games");
       const loadedGames = (gamesResponse.data.data || []).map((game) => ({
         ...game,
         expectedContributionPerDirector: Number(game.expectedContributionPerDirector),
@@ -46,8 +35,6 @@ export default function JogosPage() {
           (first, second) => new Date(second.date).getTime() - new Date(first.date).getTime(),
         ),
       );
-      setSettings(settingsResponse.data.data);
-      setSettingsDraft(settingsResponse.data.data);
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Erro ao carregar jogos"));
     } finally {
@@ -100,31 +87,6 @@ export default function JogosPage() {
     }
   };
 
-  const saveSettings = async () => {
-    if (!settingsDraft) return;
-    if (
-      settingsDraft.mode === "MONTHLY" &&
-      (!Number.isFinite(settingsDraft.monthlyContributionPerDirector) ||
-        settingsDraft.monthlyContributionPerDirector <= 0)
-    ) {
-      return toast.error("Informe um valor mensal maior que zero");
-    }
-    setSavingSettings(true);
-    try {
-      const response = await api.put<ApiEnvelope<ContributionSettings>>(
-        "/team-settings/contributions",
-        settingsDraft,
-      );
-      setSettings(response.data.data);
-      setSettingsDraft(response.data.data);
-      toast.success("Regra de arrecadação atualizada");
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, "Erro ao atualizar a regra de arrecadação"));
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
   const onDelete = async (id: string) => {
     try {
       await api.delete(`/games/${id}`);
@@ -154,22 +116,13 @@ export default function JogosPage() {
         <PageHeader
           eyebrow="Cadastros do time"
           title="Jogos"
-          description="Organize as partidas e defina a regra de contribuição dos diretores."
+          description="Organize as partidas e preserve o valor esperado por diretor em cada jogo."
           aside={
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300">
               {games.filter((game) => game.status === "ABERTO").length} abertos
             </span>
           }
         />
-        {settingsDraft && (
-          <ContributionSettingsCard
-            settings={settingsDraft}
-            isAdmin={isAdmin}
-            saving={savingSettings}
-            onChange={setSettingsDraft}
-            onSave={() => void saveSettings()}
-          />
-        )}
         {isAdmin && (
           <GameForm
             editingId={editingId}
@@ -185,7 +138,6 @@ export default function JogosPage() {
         )}
         <GameList
           games={games}
-          settings={settings}
           loading={loading}
           isAdmin={isAdmin}
           onEdit={startEditing}

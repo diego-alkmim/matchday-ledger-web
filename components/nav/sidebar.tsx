@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   BarChart3,
+  BadgeDollarSign,
   Building2,
   CalendarDays,
   LayoutDashboard,
@@ -128,6 +129,7 @@ export function ProtectedPage({ children }: { children: React.ReactNode }) {
         <nav className="grid gap-1">
           <NavItem href="/dashboard" label="Visão geral" icon={LayoutDashboard} active={pathname === "/dashboard"} onNavigate={() => setOpen(false)} />
           <NavItem href="/lancamentos" label="Lançamentos" icon={Receipt} active={pathname === "/lancamentos"} onNavigate={() => setOpen(false)} />
+          <NavItem href="/arrecadacoes" label="Arrecadações" icon={BadgeDollarSign} active={pathname === "/arrecadacoes"} onNavigate={() => setOpen(false)} />
           <NavItem href="/relatorios" label="Relatórios" icon={BarChart3} active={pathname === "/relatorios"} onNavigate={() => setOpen(false)} />
         </nav>
 

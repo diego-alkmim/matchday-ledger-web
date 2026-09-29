@@ -10,12 +10,20 @@ import api from "../api-client";
 import { ApiEnvelope, getApiErrorMessage } from "../../lib/api-types";
 import type { AnalyticalGame, ConsolidatedResponse, GameOption, PaginatedAnalyticalResponse, ReportFilters, ReportPagination, ReportType } from "./report-types";
 
-const initialFilters: ReportFilters = { from: "", to: "", gameId: "" };
+const now = new Date();
+const currentYear = now.getFullYear();
+const currentMonth = String(now.getMonth() + 1).padStart(2, "0");
+const currentDay = String(now.getDate()).padStart(2, "0");
+const initialFilters: ReportFilters = {
+  from: `${currentYear}-01-01`,
+  to: `${currentYear}-${currentMonth}-${currentDay}`,
+  gameId: "",
+};
 const initialAnalyticalPagination: ReportPagination = { page: 1, pageSize: 20, total: 0, totalPages: 0 };
 
 export default function RelatoriosPage() {
   const [games, setGames] = useState<GameOption[]>([]);
-  const [gamesLoading, setGamesLoading] = useState(true);
+  const [gamesLoading, setGamesLoading] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ReportType | null>(null);
   const [reportLoaded, setReportLoaded] = useState<Record<ReportType, boolean>>({ analytical: false, consolidated: false });
   const [loading, setLoading] = useState(false);
@@ -25,19 +33,40 @@ export default function RelatoriosPage() {
   const [filters, setFilters] = useState(initialFilters);
 
   useEffect(() => {
-    const loadGames = async () => {
+    if (selectedReport !== "analytical" || !filters.from || !filters.to) {
+      setGamesLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setGamesLoading(true);
+    const timeout = window.setTimeout(async () => {
       try {
-        setGamesLoading(true);
-        const response = await api.get<ApiEnvelope<GameOption[]>>("/games");
-        setGames(response.data.data || []);
+        const params = new URLSearchParams({ compact: "true" });
+        params.set("activityFrom", filters.from);
+        params.set("activityTo", filters.to);
+        const response = await api.get<ApiEnvelope<GameOption[]>>(`/games?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        const options = response.data.data || [];
+        setGames(options);
+        setFilters((current) => options.some((game) => game.id === current.gameId)
+          ? current
+          : { ...current, gameId: "" });
       } catch (error) {
-        toast.error(getApiErrorMessage(error, "Erro ao carregar jogos"));
+        if (!controller.signal.aborted) {
+          toast.error(getApiErrorMessage(error, "Erro ao carregar jogos"));
+        }
       } finally {
-        setGamesLoading(false);
+        if (!controller.signal.aborted) setGamesLoading(false);
       }
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
     };
-    void loadGames();
-  }, []);
+  }, [selectedReport, filters.from, filters.to]);
 
   const buildQuery = (includeGame: boolean) => {
     const params = new URLSearchParams();
@@ -50,6 +79,10 @@ export default function RelatoriosPage() {
   const loadSelectedReport = async (page = 1) => {
     if (!selectedReport) {
       toast.error("Selecione um relatório antes de aplicar os filtros");
+      return;
+    }
+    if (!filters.from || !filters.to) {
+      toast.error("Informe as datas inicial e final do período");
       return;
     }
     try {

@@ -94,7 +94,7 @@ export type ConsolidatedDirector = {
 
 export type ConsolidatedResponse = {
   summary: {
-    mode: "PER_GAME" | "MONTHLY";
+    mode: "PER_GAME" | "MONTHLY" | "MIXED";
     gamesCount: number;
     obligationsCount: number;
     monthlyContributionPerDirector?: number | null;

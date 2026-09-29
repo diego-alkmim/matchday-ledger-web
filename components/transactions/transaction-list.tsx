@@ -200,12 +200,9 @@ function TransactionCard({
           </p>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-400">
             <span>{formatPaymentMethod(transaction.paymentMethod)}</span>
-            {transaction.game && (
-              <span>
-                {transaction.game.opponent || "Jogo sem adversário"} ·{" "}
-                {new Date(transaction.game.date).toLocaleDateString("pt-BR")}
-              </span>
-            )}
+            <span>{transaction.game
+              ? `${transaction.game.opponent || "Jogo sem adversário"} · ${new Date(transaction.game.date).toLocaleDateString("pt-BR")}`
+              : "Arrecadação sem vínculo com jogo"}</span>
           </div>
           {transaction.notes && (
             <p className="mt-2 border-l border-white/15 pl-3 text-sm text-slate-300">
@@ -213,7 +210,7 @@ function TransactionCard({
             </p>
           )}
         </div>
-        {isAdmin && (
+        {isAdmin && !transaction.collectionPayment && (
           <div className="flex shrink-0 gap-2 md:opacity-0 md:transition md:group-hover:opacity-100 md:group-focus-within:opacity-100">
             <button
               onClick={() => onEdit(transaction)}
@@ -229,6 +226,7 @@ function TransactionCard({
             </button>
           </div>
         )}
+        {transaction.collectionPayment && <span className="rounded-lg border border-emerald-300/20 px-3 py-2 text-xs font-semibold text-emerald-200">Gerenciado em Arrecadações</span>}
       </div>
     </article>
   );

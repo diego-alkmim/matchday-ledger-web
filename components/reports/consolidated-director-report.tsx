@@ -25,7 +25,7 @@ export function ConsolidatedDirectorReport({ data }: { data: ConsolidatedRespons
       ),
     0,
   );
-  const modeLabel = data.summary.mode === "PER_GAME" ? "Por jogo" : "Por mês com jogo";
+  const modeLabel = data.summary.mode === "PER_GAME" ? "Por jogo" : data.summary.mode === "MONTHLY" ? "Por mês" : "Misto";
 
   return (
     <>
@@ -33,7 +33,7 @@ export function ConsolidatedDirectorReport({ data }: { data: ConsolidatedRespons
         <Metric label="Jogos no período" value={String(data.summary.gamesCount)} tone="white" />
         <Metric label="Regra" value={modeLabel} tone="emerald" />
         <Metric
-          label="Obrigações por diretor"
+          label="Obrigações no período"
           value={String(data.summary.obligationsCount)}
           tone="white"
         />
@@ -49,7 +49,7 @@ export function ConsolidatedDirectorReport({ data }: { data: ConsolidatedRespons
         <div>
           <h2 className="text-lg font-semibold text-white">Consolidado por diretor</h2>
           <p className="text-sm text-slate-400">
-            Valores calculados pela regra do time e apenas por entradas da categoria Diretoria.
+            Valores calculados pelas obrigações e pagamentos registrados no módulo de arrecadações.
           </p>
         </div>
         {data.directors.length ? (

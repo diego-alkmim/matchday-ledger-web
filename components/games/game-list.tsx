@@ -1,10 +1,9 @@
 import { CalendarDays, Clock3, Coins, MapPin, PencilLine, ShieldCheck, Trash2 } from "lucide-react";
-import type { ContributionSettings, Game } from "../../app/jogos/types";
+import type { Game } from "../../app/jogos/types";
 import { EmptyState, Surface } from "../ui/page-primitives";
 
 type Props = {
   games: Game[];
-  settings: ContributionSettings | null;
   loading: boolean;
   isAdmin: boolean;
   onEdit: (game: Game) => void;
@@ -14,16 +13,14 @@ type Props = {
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
-export function GameList({ games, settings, loading, isAdmin, onEdit, onDelete }: Props) {
+export function GameList({ games, loading, isAdmin, onEdit, onDelete }: Props) {
   return (
     <Surface>
       <div className="flex items-center justify-between border-b border-white/10 px-5 py-5">
         <div>
           <h2 className="font-bold text-white">Agenda de jogos</h2>
           <p className="mt-0.5 text-sm text-slate-400">
-            {settings?.mode === "MONTHLY"
-              ? "O consolidado usa uma obrigação por mês com jogo."
-              : "O consolidado usa o valor esperado registrado em cada jogo."}
+            O valor esperado por diretor fica registrado em cada jogo para preservar o histórico.
           </p>
         </div>
         {loading && <span className="text-xs text-emerald-300">Atualizando...</span>}

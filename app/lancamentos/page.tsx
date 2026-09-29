@@ -139,11 +139,11 @@ export default function LancamentosPage() {
     });
   };
 
-  const onDelete = async (id: string) => {
+  const onDelete = async (id: string, reason: string) => {
     if (!isAdmin) return;
     try {
-      await api.delete(`/transactions/${id}`);
-      toast.success("Lançamento removido");
+      await api.delete(`/transactions/${id}`, { data: { reason } });
+      toast.success("Lançamento estornado e histórico preservado");
       if (editingId === id) resetForm();
       reloadTransactions();
     } catch (error) {
@@ -247,7 +247,7 @@ export default function LancamentosPage() {
         )}
         <TransactionList items={items} categories={categories} games={games} filters={filters} pagination={pagination} isAdmin={isAdmin} onFiltersChange={(nextFilters) => { setFilters(nextFilters); setPage(1); }} onPageChange={setPage} onEdit={onEdit} onDeleteRequest={setPendingDeleteId} />
       </div>
-      {isAdmin && pendingDeleteId && <TransactionDeleteDialog onCancel={() => setPendingDeleteId(null)} onConfirm={() => void onDelete(pendingDeleteId)} />}
+      {isAdmin && pendingDeleteId && <TransactionDeleteDialog onCancel={() => setPendingDeleteId(null)} onConfirm={(reason) => void onDelete(pendingDeleteId, reason)} />}
     </ProtectedPage>
   );
 }
