@@ -21,6 +21,7 @@ export default function JogosPage() {
   const [form, setForm] = useState(initialGameForm);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
+  const [correctingGameId, setCorrectingGameId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -110,6 +111,45 @@ export default function JogosPage() {
     setSelectedTime(date);
   };
 
+  const correctFinancialValue = async (game: Game) => {
+    const valueInput = window.prompt(
+      "Informe o novo valor esperado por diretor:",
+      String(game.expectedContributionPerDirector).replace(".", ","),
+    );
+    if (valueInput === null) return;
+    const expectedContributionPerDirector = Number(valueInput.trim().replace(",", "."));
+    if (!Number.isFinite(expectedContributionPerDirector) || expectedContributionPerDirector <= 0) {
+      toast.error("Informe um valor maior que zero");
+      return;
+    }
+    if (expectedContributionPerDirector === game.expectedContributionPerDirector) {
+      toast.error("O novo valor deve ser diferente do valor atual");
+      return;
+    }
+    const reason = window.prompt("Informe o motivo da correção financeira:");
+    if (!reason?.trim()) {
+      if (reason !== null) toast.error("Informe o motivo da correção");
+      return;
+    }
+    if (!window.confirm(
+      `Confirmar a correção de ${game.expectedContributionPerDirector.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} para ${expectedContributionPerDirector.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}? O histórico financeiro será preservado.`,
+    )) return;
+
+    setCorrectingGameId(game.id);
+    try {
+      await api.patch(`/games/${game.id}/financial-value`, {
+        expectedContributionPerDirector,
+        reason: reason.trim(),
+      });
+      toast.success("Valor financeiro corrigido e obrigações atualizadas");
+      await load();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao corrigir o valor financeiro"));
+    } finally {
+      setCorrectingGameId(null);
+    }
+  };
+
   return (
     <ProtectedPage>
       <div className="space-y-6">
@@ -142,6 +182,8 @@ export default function JogosPage() {
           isAdmin={isAdmin}
           onEdit={startEditing}
           onDelete={(id) => void onDelete(id)}
+          onCorrectFinancialValue={(game) => void correctFinancialValue(game)}
+          correctingGameId={correctingGameId}
         />
       </div>
     </ProtectedPage>

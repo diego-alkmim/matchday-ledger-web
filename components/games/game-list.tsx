@@ -1,4 +1,13 @@
-import { CalendarDays, Clock3, Coins, MapPin, PencilLine, ShieldCheck, Trash2 } from "lucide-react";
+import {
+  CalendarDays,
+  Clock3,
+  Coins,
+  MapPin,
+  PencilLine,
+  RefreshCw,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import type { Game } from "../../app/jogos/types";
 import { EmptyState, Surface } from "../ui/page-primitives";
 
@@ -8,12 +17,22 @@ type Props = {
   isAdmin: boolean;
   onEdit: (game: Game) => void;
   onDelete: (id: string) => void;
+  onCorrectFinancialValue: (game: Game) => void;
+  correctingGameId: string | null;
 };
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
-export function GameList({ games, loading, isAdmin, onEdit, onDelete }: Props) {
+export function GameList({
+  games,
+  loading,
+  isAdmin,
+  onEdit,
+  onDelete,
+  onCorrectFinancialValue,
+  correctingGameId,
+}: Props) {
   return (
     <Surface>
       <div className="flex items-center justify-between border-b border-white/10 px-5 py-5">
@@ -61,12 +80,24 @@ export function GameList({ games, loading, isAdmin, onEdit, onDelete }: Props) {
                 </p>
               </div>
               {isAdmin && (
-                <div className="mt-5 flex gap-4 border-t border-white/10 pt-3">
+                <div className="mt-5 flex flex-wrap gap-4 border-t border-white/10 pt-3">
                   <button
                     onClick={() => onEdit(game)}
                     className="inline-flex items-center gap-2 text-sm font-semibold text-sky-200"
                   >
                     <PencilLine size={15} /> Editar
+                  </button>
+                  <button
+                    onClick={() => onCorrectFinancialValue(game)}
+                    disabled={correctingGameId === game.id}
+                    title="Use quando o valor precisar ser corrigido após uma movimentação financeira"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-amber-200 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    <RefreshCw
+                      size={15}
+                      className={correctingGameId === game.id ? "animate-spin" : ""}
+                    />
+                    Corrigir valor
                   </button>
                   <button
                     onClick={() => onDelete(game.id)}
